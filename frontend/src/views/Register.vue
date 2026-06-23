@@ -76,8 +76,10 @@
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import { useUserStore } from '@/stores/user'
 
 const router = useRouter()
+const userStore = useUserStore()
 const registerFormRef = ref()
 const registerForm = reactive({
   role: '',
@@ -106,13 +108,38 @@ const rules = {
   careTypes: [{ required: true, message: '请选择可照顾的宠物类型', trigger: 'change' }]
 }
 
-const handleRegister = () => {
-  registerFormRef.value?.validate((valid: boolean) => {
+const handleRegister = async () => {
+  registerFormRef.value?.validate(async (valid: boolean) => {
     if (valid) {
-      localStorage.setItem('token', 'mock-token')
-      localStorage.setItem('role', registerForm.role)
-      ElMessage.success('注册成功')
-      router.push('/dashboard')
+      let success = false
+      if (registerForm.role === 'owner') {
+        success = await userStore.handleRegisterOwner({
+          username: registerForm.username,
+          password: registerForm.password,
+          phone: registerForm.phone,
+          studentNo: registerForm.studentNo,
+          name: registerForm.name,
+          school: registerForm.school,
+          major: registerForm.major,
+          dorm: registerForm.dorm
+        })
+      } else if (registerForm.role === 'caregiver') {
+        success = await userStore.handleRegisterCaregiver({
+          username: registerForm.username,
+          password: registerForm.password,
+          phone: registerForm.phone,
+          name: registerForm.name,
+          address: registerForm.address,
+          distance: registerForm.distance,
+          careTypes: JSON.stringify(registerForm.careTypes)
+        })
+      }
+      if (success) {
+        ElMessage.success('注册成功')
+        router.push('/dashboard')
+      } else {
+        ElMessage.error('注册失败，用户名可能已存在')
+      }
     }
   })
 }

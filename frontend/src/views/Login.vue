@@ -28,8 +28,10 @@
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import { useUserStore } from '@/stores/user'
 
 const router = useRouter()
+const userStore = useUserStore()
 const loginFormRef = ref()
 const loginForm = reactive({
   username: '',
@@ -41,12 +43,11 @@ const rules = {
   password: [{ required: true, message: '请输入密码', trigger: 'blur' }]
 }
 
-const handleLogin = () => {
-  loginFormRef.value?.validate((valid: boolean) => {
+const handleLogin = async () => {
+  loginFormRef.value?.validate(async (valid: boolean) => {
     if (valid) {
-      if (loginForm.username === 'admin' && loginForm.password === 'admin') {
-        localStorage.setItem('token', 'mock-token')
-        localStorage.setItem('role', 'admin')
+      const success = await userStore.handleLogin(loginForm.username, loginForm.password)
+      if (success) {
         ElMessage.success('登录成功')
         router.push('/dashboard')
       } else {
