@@ -1,0 +1,17 @@
+# Java后端过滤
+target/
+.idea/
+*.iml
+*.class
+*.log
+application-dev.yml
+
+# Vue前端过滤
+node_modules/
+dist/
+.vite/
+*.log
+
+# 系统文件
+Thumbs.db
+.DS_Store
