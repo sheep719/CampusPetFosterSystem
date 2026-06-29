@@ -229,8 +229,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, type FormInstance, type FormRules } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ref, reactive } from 'vue'
+import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
 import { UserFilled, Camera, Edit, Key } from '@element-plus/icons-vue'
 
 const isEditing = ref(false)
@@ -292,7 +292,7 @@ const passwordRules: FormRules = {
   confirmPassword: [
     { required: true, message: '请确认新密码', trigger: 'blur' },
     {
-      validator: (rule, value, callback) => {
+      validator: (rule: any, value: string, callback: (error?: Error) => void) => {
         if (value !== passwordForm.newPassword) {
           callback(new Error('两次输入的密码不一致'))
         } else {

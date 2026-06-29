@@ -137,7 +137,7 @@ const loading = ref(false)
 const dialogVisible = ref(false)
 const dialogTitle = ref('')
 const formRef = ref<FormInstance>()
-const tableRef = ref<TableInstance>()
+const tableRef = ref<any>()
 const isEdit = ref(false)
 
 const searchForm = reactive({

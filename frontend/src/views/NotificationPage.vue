@@ -179,7 +179,7 @@ const loadData = () => {
       filtered = filtered.filter(item => item.type === searchForm.type)
     }
     if (searchForm.status !== '') {
-      filtered = filtered.filter(item => item.readStatus === searchForm.status)
+      filtered = filtered.filter(item => item.readStatus === (searchForm.status === 'true'))
     }
     totalCount.value = filtered.length
     unreadCount.value = filtered.filter(item => !item.readStatus).length
