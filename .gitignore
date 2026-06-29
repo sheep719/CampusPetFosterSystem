@@ -5,6 +5,7 @@ target/
 *.class
 *.log
 application-dev.yml
+src/main/resources/static/
 
 # Vue前端过滤
 node_modules/

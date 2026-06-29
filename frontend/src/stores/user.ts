@@ -6,6 +6,7 @@ export const useUserStore = defineStore('user', () => {
   const token = ref(localStorage.getItem('token') || '')
   const role = ref(localStorage.getItem('role') || '')
   const userId = ref<number | null>(null)
+  const username = ref(localStorage.getItem('username') || '')
 
   const setToken = (newToken: string) => {
     token.value = newToken
@@ -22,21 +23,29 @@ export const useUserStore = defineStore('user', () => {
     localStorage.setItem('userId', String(id))
   }
 
+  const setUsername = (name: string) => {
+    username.value = name
+    localStorage.setItem('username', name)
+  }
+
   const clearUser = () => {
     token.value = ''
     role.value = ''
     userId.value = null
+    username.value = ''
     localStorage.removeItem('token')
     localStorage.removeItem('role')
     localStorage.removeItem('userId')
+    localStorage.removeItem('username')
   }
 
-  const handleLogin = async (username: string, password: string): Promise<boolean> => {
+  const handleLogin = async (usernameStr: string, password: string): Promise<boolean> => {
     try {
-      const result: LoginResponse = await login(username, password)
+      const result: LoginResponse = await login(usernameStr, password)
       setToken(result.token)
       setRole(result.role)
       setUserId(result.userId)
+      setUsername(usernameStr)
       return true
     } catch {
       return false
@@ -65,9 +74,11 @@ export const useUserStore = defineStore('user', () => {
     token,
     role,
     userId,
+    username,
     setToken,
     setRole,
     setUserId,
+    setUsername,
     clearUser,
     handleLogin,
     handleRegisterOwner,

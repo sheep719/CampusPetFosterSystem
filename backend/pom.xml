@@ -18,7 +18,7 @@
     <description>校园宠物临时寄养管理系统</description>
     
     <properties>
-        <java.version>21</java.version>
+        <java.version>17</java.version>
         <mybatis-plus.version>3.5.5</mybatis-plus.version>
     </properties>
     
@@ -51,8 +51,14 @@
         </dependency>
         
         <dependency>
-            <groupId>mysql</groupId>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
+        </dependency>
+        
+        <dependency>
+            <groupId>com.mysql</groupId>
             <artifactId>mysql-connector-j</artifactId>
+            <version>8.0.33</version>
             <scope>runtime</scope>
         </dependency>
         

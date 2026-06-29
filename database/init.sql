@@ -117,10 +117,23 @@ CREATE TABLE `handover_record` (
     `photo_url` VARCHAR(255) COMMENT '交接照片URL'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='交接记录表';
 
+DROP TABLE IF EXISTS `notification`;
+CREATE TABLE `notification` (
+    `id` BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '通知ID',
+    `user_id` BIGINT NOT NULL COMMENT '用户ID',
+    `type` VARCHAR(20) COMMENT '通知类型(expire/rating/system)',
+    `title` VARCHAR(100) COMMENT '通知标题',
+    `content` TEXT COMMENT '通知内容',
+    `link_url` VARCHAR(255) COMMENT '跳转链接',
+    `read_status` BOOLEAN DEFAULT false COMMENT '是否已读',
+    `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `read_time` DATETIME COMMENT '阅读时间'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='通知表';
+
 INSERT INTO `sys_user` (`username`, `password`, `role_code`, `phone`, `enabled`, `create_time`) VALUES
-('admin', '$2a$10$N9qo8uLOickgx2ZMRZoMye.IjzqAKL9xL5jvMFVdNJHvGCgTq/VEq', 'admin', '13800138000', 1, NOW()),
-('student001', '$2a$10$N9qo8uLOickgx2ZMRZoMye.IjzqAKL9xL5jvMFVdNJHvGCgTq/VEq', 'owner', '13900139001', 1, NOW()),
-('caregiver001', '$2a$10$N9qo8uLOickgx2ZMRZoMye.IjzqAKL9xL5jvMFVdNJHvGCgTq/VEq', 'caregiver', '13900139002', 1, NOW());
+('admin', '$2a$10$rD3Z7FWH4fID9VxQxQv1HOYb6qLp0L3M7D4E9F3H5I6J7K8L9M0N', 'admin', '13800138000', 1, NOW()),
+('student001', '$2a$10$rD3Z7FWH4fID9VxQxQv1HOYb6qLp0L3M7D4E9F3H5I6J7K8L9M0N', 'owner', '13900139001', 1, NOW()),
+('caregiver001', '$2a$10$rD3Z7FWH4fID9VxQxQv1HOYb6qLp0L3M7D4E9F3H5I6J7K8L9M0N', 'caregiver', '13900139002', 1, NOW());
 
 INSERT INTO `pet_owner_profile` (`user_id`, `student_no`, `name`, `school`, `major`, `dorm`, `contact_phone`) VALUES
 (2, '2024001', '张三', 'XX大学', '计算机科学与技术', '男生宿舍1号楼301', '13900139001');

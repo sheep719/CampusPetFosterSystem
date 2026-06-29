@@ -1,5 +1,5 @@
 <template>
-  <div class="foster-application-management">
+  <div class="owner-applications">
     <el-card class="search-card" shadow="never">
       <el-form :inline="true" :model="searchForm" class="search-form">
         <el-form-item label="申请编号">
@@ -7,9 +7,6 @@
         </el-form-item>
         <el-form-item label="宠物名称">
           <el-input v-model="searchForm.petName" placeholder="请输入宠物名称" clearable style="width: 150px" />
-        </el-form-item>
-        <el-form-item label="寄养者">
-          <el-input v-model="searchForm.ownerName" placeholder="请输入寄养者姓名" clearable style="width: 150px" />
         </el-form-item>
         <el-form-item label="申请状态">
           <el-select v-model="searchForm.status" placeholder="全部" clearable style="width: 150px">
@@ -30,7 +27,7 @@
 
     <el-card class="table-card" shadow="never">
       <div class="table-header">
-        <h3 class="table-title">寄养申请列表</h3>
+        <h3 class="table-title">我的寄养申请</h3>
       </div>
       <el-table :data="tableData" border stripe style="width: 100%" v-loading="loading">
         <el-table-column type="index" label="序号" width="60" align="center" />
@@ -45,9 +42,8 @@
             <el-tag :type="getSpeciesTagType(row.species)" effect="light">{{ getSpeciesLabel(row.species) }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="ownerName" label="寄养者" width="100" />
-        <el-table-column prop="ownerPhone" label="联系方式" width="130" />
         <el-table-column prop="caregiverName" label="被寄养者" width="100" />
+        <el-table-column prop="locationName" label="寄养点" width="150" />
         <el-table-column prop="startDate" label="开始日期" width="120" />
         <el-table-column prop="endDate" label="结束日期" width="120" />
         <el-table-column prop="days" label="寄养天数" width="90" align="center">
@@ -65,11 +61,12 @@
             <el-tag :type="getStatusTagType(row.status)" effect="light">{{ getStatusLabel(row.status) }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="200" fixed="right" align="center">
+        <el-table-column label="操作" width="220" fixed="right" align="center">
           <template #default="{ row }">
             <el-button type="primary" link :icon="View" @click="handleView(row)">详情</el-button>
-            <el-button type="success" link :icon="Check" @click="handleApprove(row)" v-if="row.status === 'pending'">通过</el-button>
-            <el-button type="danger" link :icon="Close" @click="handleReject(row)" v-if="row.status === 'pending'">拒绝</el-button>
+            <el-button type="danger" link :icon="Close" @click="handleCancel(row)" v-if="row.status === 'pending' || row.status === 'approved'">取消申请</el-button>
+            <el-button type="success" link :icon="Star" @click="handleRate(row)" v-if="row.status === 'completed' && !row.rated">评价</el-button>
+            <el-tag type="success" size="small" v-if="row.status === 'completed' && row.rated">已评价</el-tag>
           </template>
         </el-table-column>
       </el-table>
@@ -103,8 +100,6 @@
         </el-descriptions-item>
         <el-descriptions-item label="品种">{{ detailData.breed }}</el-descriptions-item>
         <el-descriptions-item label="年龄">{{ detailData.age }}岁</el-descriptions-item>
-        <el-descriptions-item label="寄养者">{{ detailData.ownerName }}</el-descriptions-item>
-        <el-descriptions-item label="联系方式">{{ detailData.ownerPhone }}</el-descriptions-item>
         <el-descriptions-item label="被寄养者">{{ detailData.caregiverName }}</el-descriptions-item>
         <el-descriptions-item label="寄养点">{{ detailData.locationName }}</el-descriptions-item>
         <el-descriptions-item label="开始日期">{{ detailData.startDate }}</el-descriptions-item>
@@ -126,24 +121,27 @@
     </el-dialog>
 
     <el-dialog
-      v-model="auditVisible"
-      :title="auditDialogTitle"
+      v-model="rateVisible"
+      title="评价服务"
       width="450px"
       :close-on-click-modal="false"
     >
-      <el-form :model="auditForm" ref="auditFormRef" label-width="80px">
-        <el-form-item label="审核备注">
+      <el-form :model="rateForm" :rules="rateRules" ref="rateFormRef" label-width="80px">
+        <el-form-item label="评分">
+          <el-rate v-model="rateForm.rating" :show-text="true" text-color="#FF9900" />
+        </el-form-item>
+        <el-form-item label="评价内容">
           <el-input
-            v-model="auditForm.remark"
+            v-model="rateForm.content"
             type="textarea"
             :rows="4"
-            placeholder="请输入审核备注"
+            placeholder="请输入您对这次寄养服务的评价"
           />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="auditVisible = false">取消</el-button>
-        <el-button type="primary" @click="handleAuditSubmit">{{ auditDialogTitle }}</el-button>
+        <el-button @click="rateVisible = false">取消</el-button>
+        <el-button type="primary" @click="handleSubmitRate">提交评价</el-button>
       </template>
     </el-dialog>
   </div>
@@ -151,21 +149,18 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
-import { ElMessage, type FormInstance } from 'element-plus'
-import { Search, Refresh, View, Check, Close } from '@element-plus/icons-vue'
+import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
+import { Search, Refresh, View, Close, Star } from '@element-plus/icons-vue'
 
 const loading = ref(false)
 const detailVisible = ref(false)
-const auditVisible = ref(false)
-const auditDialogTitle = ref('')
-const auditFormRef = ref<FormInstance>()
-const currentAuditRow = ref<any>(null)
-const isApprove = ref(false)
+const rateVisible = ref(false)
+const rateFormRef = ref<FormInstance>()
+const currentRateRow = ref<any>(null)
 
 const searchForm = reactive({
   orderNo: '',
   petName: '',
-  ownerName: '',
   status: ''
 })
 
@@ -184,8 +179,6 @@ const detailData = reactive({
   species: '',
   breed: '',
   age: 0,
-  ownerName: '',
-  ownerPhone: '',
   caregiverName: '',
   locationName: '',
   startDate: '',
@@ -198,9 +191,14 @@ const detailData = reactive({
   petNotes: ''
 })
 
-const auditForm = reactive({
-  remark: ''
+const rateForm = reactive({
+  rating: 5,
+  content: ''
 })
+
+const rateRules: FormRules = {
+  rating: [{ required: true, message: '请选择评分', trigger: 'change' }]
+}
 
 const speciesMap: Record<string, string> = {
   cat: '猫',
@@ -248,16 +246,13 @@ const getStatusTagType = (status: string) => {
 }
 
 const mockData = [
-  { id: 1, orderNo: 'FOSTER20260625001', petName: '咪咪', species: 'cat', breed: '英短', age: 2, ownerName: '张三', ownerPhone: '13800138001', caregiverName: '李阿姨', locationName: '李阿姨温馨小屋', startDate: '2026-06-26', endDate: '2026-07-02', days: 7, totalPrice: 420, status: 'pending', createTime: '2026-06-25 09:30:00', petNotes: '性格温顺，喜欢吃猫粮' },
-  { id: 2, orderNo: 'FOSTER20260625002', petName: '旺财', species: 'dog', breed: '金毛', age: 3, ownerName: '李四', ownerPhone: '13800138002', caregiverName: '张叔叔', locationName: '张叔叔宠物之家', startDate: '2026-06-27', endDate: '2026-07-04', days: 8, totalPrice: 400, status: 'pending', createTime: '2026-06-25 10:15:00', petNotes: '活泼好动，每天需要遛两次' },
-  { id: 3, orderNo: 'FOSTER20260625003', petName: '雪球', species: 'rabbit', breed: '垂耳兔', age: 1, ownerName: '王五', ownerPhone: '13800138003', caregiverName: '王奶奶', locationName: '王奶奶仓鼠乐园', startDate: '2026-06-28', endDate: '2026-07-01', days: 4, totalPrice: 120, status: 'approved', createTime: '2026-06-25 11:00:00', auditTime: '2026-06-25 11:30:00', petNotes: '胆小，需要安静环境' },
-  { id: 4, orderNo: 'FOSTER20260625004', petName: '小仓鼠', species: 'hamster', breed: '金丝熊', age: 0.5, ownerName: '赵六', ownerPhone: '13800138004', caregiverName: '孙阿姨', locationName: '孙阿姨萌宠乐园', startDate: '2026-06-25', endDate: '2026-06-30', days: 6, totalPrice: 270, status: 'fostering', createTime: '2026-06-24 14:00:00', auditTime: '2026-06-24 14:30:00', petNotes: '最近有点食欲不振' },
-  { id: 5, orderNo: 'FOSTER20260625005', petName: '橘子', species: 'cat', breed: '橘猫', age: 4, ownerName: '钱七', ownerPhone: '13800138005', caregiverName: '陈阿姨', locationName: '陈阿姨猫咪公寓', startDate: '2026-06-20', endDate: '2026-06-25', days: 6, totalPrice: 330, status: 'completed', createTime: '2026-06-19 10:00:00', auditTime: '2026-06-19 10:30:00', petNotes: '爱吃，容易长胖' },
-  { id: 6, orderNo: 'FOSTER20260625006', petName: '可乐', species: 'dog', breed: '柯基', age: 2, ownerName: '孙八', ownerPhone: '13800138006', caregiverName: '刘大哥', locationName: '刘大哥宠物旅馆', startDate: '2026-06-25', endDate: '2026-07-01', days: 7, totalPrice: 490, status: 'rejected', createTime: '2026-06-24 16:00:00', auditTime: '2026-06-24 16:30:00', auditRemark: '寄养点已满', petNotes: '短腿，跑不快' },
-  { id: 7, orderNo: 'FOSTER20260625007', petName: '皮皮', species: 'bird', breed: '玄凤鹦鹉', age: 1, ownerName: '周九', ownerPhone: '13800138007', caregiverName: '吴阿姨', locationName: '吴阿姨小鸟屋', startDate: '2026-06-29', endDate: '2026-07-06', days: 8, totalPrice: 200, status: 'pending', createTime: '2026-06-25 14:00:00', petNotes: '会说话' },
-  { id: 8, orderNo: 'FOSTER20260625008', petName: '忍者', species: 'turtle', breed: '巴西龟', age: 5, ownerName: '吴十', ownerPhone: '13800138008', caregiverName: '赵姐', locationName: '赵姐乌龟池', startDate: '2026-06-25', endDate: '2026-07-05', days: 11, totalPrice: 220, status: 'fostering', createTime: '2026-06-24 09:00:00', auditTime: '2026-06-24 09:30:00', petNotes: '喜欢晒太阳' },
-  { id: 9, orderNo: 'FOSTER20260625009', petName: '小黑', species: 'cat', breed: '黑猫', age: 1, ownerName: '郑十一', ownerPhone: '13800138009', caregiverName: '李阿姨', locationName: '李阿姨温馨小屋', startDate: '2026-06-30', endDate: '2026-07-07', days: 8, totalPrice: 480, status: 'pending', createTime: '2026-06-25 15:30:00', petNotes: '感冒中，正在治疗' },
-  { id: 10, orderNo: 'FOSTER20260625010', petName: '大白', species: 'dog', breed: '萨摩耶', age: 2, ownerName: '王十二', ownerPhone: '13800138010', caregiverName: '周叔叔', locationName: '周叔叔犬舍', startDate: '2026-06-22', endDate: '2026-06-28', days: 7, totalPrice: 560, status: 'cancelled', createTime: '2026-06-21 10:00:00', petNotes: '毛发雪白，需要经常打理' }
+  { id: 1, orderNo: 'FOSTER20260625001', petName: '咪咪', species: 'cat', breed: '英短', age: 2, caregiverName: '李阿姨', locationName: '李阿姨温馨小屋', startDate: '2026-06-26', endDate: '2026-07-02', days: 7, totalPrice: 420, status: 'pending', rated: false, createTime: '2026-06-25 09:30:00', petNotes: '性格温顺，喜欢吃猫粮' },
+  { id: 2, orderNo: 'FOSTER20260625003', petName: '雪球', species: 'rabbit', breed: '垂耳兔', age: 1, caregiverName: '王奶奶', locationName: '王奶奶仓鼠乐园', startDate: '2026-06-28', endDate: '2026-07-01', days: 4, totalPrice: 120, status: 'approved', rated: false, createTime: '2026-06-25 11:00:00', auditTime: '2026-06-25 11:30:00', petNotes: '胆小，需要安静环境' },
+  { id: 3, orderNo: 'FOSTER20260625004', petName: '小仓鼠', species: 'hamster', breed: '金丝熊', age: 0.5, caregiverName: '孙阿姨', locationName: '孙阿姨萌宠乐园', startDate: '2026-06-25', endDate: '2026-06-30', days: 6, totalPrice: 270, status: 'fostering', rated: false, createTime: '2026-06-24 14:00:00', auditTime: '2026-06-24 14:30:00', petNotes: '最近有点食欲不振' },
+  { id: 4, orderNo: 'FOSTER20260625005', petName: '橘子', species: 'cat', breed: '橘猫', age: 4, caregiverName: '陈阿姨', locationName: '陈阿姨猫咪公寓', startDate: '2026-06-20', endDate: '2026-06-25', days: 6, totalPrice: 330, status: 'completed', rated: true, createTime: '2026-06-19 10:00:00', auditTime: '2026-06-19 10:30:00', petNotes: '爱吃，容易长胖' },
+  { id: 5, orderNo: 'FOSTER20260625006', petName: '可乐', species: 'dog', breed: '柯基', age: 2, caregiverName: '刘大哥', locationName: '刘大哥宠物旅馆', startDate: '2026-06-25', endDate: '2026-07-01', days: 7, totalPrice: 490, status: 'rejected', rated: false, createTime: '2026-06-24 16:00:00', auditTime: '2026-06-24 16:30:00', auditRemark: '寄养点已满', petNotes: '短腿，跑不快' },
+  { id: 6, orderNo: 'FOSTER20260625010', petName: '大白', species: 'dog', breed: '萨摩耶', age: 2, caregiverName: '周叔叔', locationName: '周叔叔犬舍', startDate: '2026-06-22', endDate: '2026-06-28', days: 7, totalPrice: 560, status: 'cancelled', rated: false, createTime: '2026-06-21 10:00:00', petNotes: '毛发雪白，需要经常打理' },
+  { id: 7, orderNo: 'FOSTER20260625012', petName: '皮皮', species: 'bird', breed: '玄凤鹦鹉', age: 1, caregiverName: '吴阿姨', locationName: '吴阿姨小鸟屋', startDate: '2026-07-01', endDate: '2026-07-05', days: 5, totalPrice: 125, status: 'completed', rated: false, createTime: '2026-06-25 10:00:00', auditTime: '2026-06-25 10:30:00', petNotes: '会说话' }
 ]
 
 const loadData = () => {
@@ -269,9 +264,6 @@ const loadData = () => {
     }
     if (searchForm.petName) {
       filtered = filtered.filter(item => item.petName.includes(searchForm.petName))
-    }
-    if (searchForm.ownerName) {
-      filtered = filtered.filter(item => item.ownerName.includes(searchForm.ownerName))
     }
     if (searchForm.status) {
       filtered = filtered.filter(item => item.status === searchForm.status)
@@ -292,7 +284,6 @@ const handleSearch = () => {
 const handleReset = () => {
   searchForm.orderNo = ''
   searchForm.petName = ''
-  searchForm.ownerName = ''
   searchForm.status = ''
   pagination.page = 1
   loadData()
@@ -315,8 +306,6 @@ const handleView = (row: any) => {
   detailData.species = row.species
   detailData.breed = row.breed
   detailData.age = row.age
-  detailData.ownerName = row.ownerName
-  detailData.ownerPhone = row.ownerPhone
   detailData.caregiverName = row.caregiverName
   detailData.locationName = row.locationName
   detailData.startDate = row.startDate
@@ -330,25 +319,28 @@ const handleView = (row: any) => {
   detailVisible.value = true
 }
 
-const handleApprove = (row: any) => {
-  isApprove.value = true
-  auditDialogTitle.value = '通过申请'
-  currentAuditRow.value = row
-  auditForm.remark = ''
-  auditVisible.value = true
+const handleCancel = (row: any) => {
+  ElMessageBox.confirm(`确定要取消申请 "${row.orderNo}" 吗？`, '提示', {
+    confirmButtonText: '确定',
+    cancelButtonText: '取消',
+    type: 'warning'
+  }).then(() => {
+    ElMessage.success('申请已取消')
+    loadData()
+  }).catch(() => {})
 }
 
-const handleReject = (row: any) => {
-  isApprove.value = false
-  auditDialogTitle.value = '拒绝申请'
-  currentAuditRow.value = row
-  auditForm.remark = ''
-  auditVisible.value = true
+const handleRate = (row: any) => {
+  currentRateRow.value = row
+  rateForm.rating = 5
+  rateForm.content = ''
+  rateVisible.value = true
 }
 
-const handleAuditSubmit = () => {
-  ElMessage.success(isApprove.value ? '申请已通过' : '申请已拒绝')
-  auditVisible.value = false
+const handleSubmitRate = async () => {
+  await rateFormRef.value?.validate()
+  ElMessage.success('评价提交成功')
+  rateVisible.value = false
   loadData()
 }
 
@@ -358,7 +350,7 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.foster-application-management {
+.owner-applications {
   padding: 0;
 }
 
