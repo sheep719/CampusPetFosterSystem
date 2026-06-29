@@ -1,1 +1,0 @@
-import{_ as o,o as a,c,b as e}from"./index-BWlkyddr.js";const r={},t={class:"page-placeholder"};function l(n,s){return a(),c("div",t,[...s[0]||(s[0]=[e("div",{class:"placeholder-icon"},"🐕",-1),e("h2",null,"寄养中宠物",-1),e("p",null,"该模块正在开发中，敬请期待~",-1)])])}const _=o(r,[["render",l],["__scopeId","data-v-f811372d"]]);export{_ as default};

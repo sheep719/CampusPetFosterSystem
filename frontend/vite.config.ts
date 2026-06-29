@@ -9,7 +9,7 @@ export default defineConfig({
       '@': resolve(__dirname, 'src')
     }
   },
-  base: '/CampusPetFosterSystem/',
+  base: '/',
   server: {
     port: 3000,
     proxy: {
