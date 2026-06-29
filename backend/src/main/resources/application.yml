@@ -3,9 +3,9 @@ server:
 
 spring:
   datasource:
-    url: ${DATABASE_URL:${MYSQL_URL:${MYSQLURL:jdbc:mysql://localhost:3306/campus_pet_foster}}}?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
-    username: ${DATABASE_USERNAME:${MYSQLUSER:${MYSQL_USER:root}}}
-    password: ${DATABASE_PASSWORD:${MYSQLPASSWORD:${MYSQL_PASSWORD:123456}}}
+    url: jdbc:mysql://${MYSQLHOST:localhost}:${MYSQLPORT:3306}/${MYSQLDATABASE:campus_pet_foster}?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    username: ${MYSQLUSER:root}
+    password: ${MYSQLPASSWORD:123456}
     driver-class-name: com.mysql.cj.jdbc.Driver
   servlet:
     multipart:
