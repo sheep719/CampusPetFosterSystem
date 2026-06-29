@@ -7,8 +7,7 @@ spring:
     driver-class-name: org.sqlite.JDBC
   sql:
     init:
-      mode: always
-      schema-locations: classpath:schema.sql
+      mode: never
   servlet:
     multipart:
       max-file-size: 10MB
