@@ -10,6 +10,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Random;
+import java.util.concurrent.CompletableFuture;
 
 @Component
 public class DataInitializer implements CommandLineRunner {
@@ -25,7 +26,7 @@ public class DataInitializer implements CommandLineRunner {
     private final NotificationMapper notificationMapper;
     private final PasswordEncoder passwordEncoder;
 
-    private static final int TARGET_COUNT = 200;
+    private static final int TARGET_COUNT = 50;
     private static final Random random = new Random();
 
     private static final String[] PET_SPECIES = {"cat", "dog", "rabbit", "hamster", "bird"};
@@ -69,7 +70,7 @@ public class DataInitializer implements CommandLineRunner {
     public void run(String... args) {
         String encodedPassword = passwordEncoder.encode("123456");
         updateDefaultPasswords(encodedPassword);
-        generateTestData();
+        CompletableFuture.runAsync(this::generateTestData);
     }
 
     private void updateDefaultPasswords(String encodedPassword) {
