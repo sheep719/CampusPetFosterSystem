@@ -2,17 +2,6 @@ server:
   port: ${PORT:8080}
 
 spring:
-  datasource:
-    url: ${MYSQL_URL:jdbc:mysql://localhost:3306/campus_pet_foster?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai}
-    username: ${MYSQLUSER:root}
-    password: ${MYSQLPASSWORD:123456}
-    driver-class-name: com.mysql.cj.jdbc.Driver
-    hikari:
-      maximum-pool-size: 10
-      minimum-idle: 5
-      connection-timeout: 30000
-      idle-timeout: 600000
-      max-lifetime: 1800000
   servlet:
     multipart:
       max-file-size: 10MB
@@ -32,5 +21,5 @@ mybatis-plus:
 
 logging:
   level:
-    com.example.campuspetfoster: DEBUG
-    com.zaxxer.hikari: DEBUG
+    com.example.campuspetfoster: INFO
+    com.zaxxer.hikari: INFO
