@@ -51,7 +51,7 @@ public class DashboardController {
 
         // 当前寄养中宠物数
         LambdaQueryWrapper<FosterApplication> inProgressWrapper = new LambdaQueryWrapper<>();
-        inProgressWrapper.eq(FosterApplication::getStatus, "in_progress");
+        inProgressWrapper.in(FosterApplication::getStatus, Arrays.asList("in_progress", "fostering"));
         stats.put("fosteringPets", fosterApplicationMapper.selectCount(inProgressWrapper));
 
         // 本月新增寄养申请数
@@ -69,7 +69,7 @@ public class DashboardController {
         LocalDateTime todayStart = LocalDateTime.now().withHour(0).withMinute(0).withSecond(0);
         LocalDateTime todayEnd = todayStart.plusDays(1);
         LambdaQueryWrapper<FosterApplication> todayExpiringWrapper = new LambdaQueryWrapper<>();
-        todayExpiringWrapper.eq(FosterApplication::getStatus, "in_progress");
+        todayExpiringWrapper.in(FosterApplication::getStatus, Arrays.asList("in_progress", "fostering"));
         todayExpiringWrapper.ge(FosterApplication::getExpectedEndTime, todayStart);
         todayExpiringWrapper.lt(FosterApplication::getExpectedEndTime, todayEnd);
         stats.put("todayExpiring", fosterApplicationMapper.selectCount(todayExpiringWrapper));
