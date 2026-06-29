@@ -348,4 +348,63 @@ public class DashboardController {
 
         return Result.success(topCaregivers);
     }
+
+    /**
+     * 手动触发生成测试数据
+     */
+    @GetMapping("/generate-test-data")
+    public Result<Map<String, Object>> generateTestData() {
+        Map<String, Object> result = new HashMap<>();
+        int count = 50;
+
+        String encodedPassword = "$2a$10$rD3Z7FWH4fID9VxQxQv1HOYb6qLp0L3M7D4E9F3H5I6J7K8L9M0N";
+        Random random = new Random();
+        String[] species = {"cat", "dog", "rabbit", "hamster", "bird"};
+        String[] statuses = {"pending", "in_progress", "completed"};
+
+        int generatedUsers = 0;
+        for (int i = 0; i < count; i++) {
+            SysUser user = new SysUser();
+            String role = random.nextBoolean() ? "owner" : "caregiver";
+            user.setUsername(role + "_test_" + System.currentTimeMillis() + "_" + i);
+            user.setPassword(encodedPassword);
+            user.setRoleCode(role);
+            user.setPhone("13800138" + String.format("%03d", i));
+            user.setEnabled(1);
+            user.setCreateTime(LocalDateTime.now());
+            sysUserMapper.insert(user);
+            generatedUsers++;
+        }
+
+        int generatedPets = 0;
+        for (int i = 0; i < count; i++) {
+            Pet pet = new Pet();
+            pet.setOwnerId((long) (random.nextInt(generatedUsers) + 1));
+            pet.setPetName("宠物" + i);
+            pet.setSpecies(species[random.nextInt(species.length)]);
+            pet.setGender(random.nextBoolean() ? "male" : "female");
+            pet.setAge(random.nextInt(10) + 1);
+            petMapper.insert(pet);
+            generatedPets++;
+        }
+
+        int generatedApplications = 0;
+        for (int i = 0; i < count; i++) {
+            FosterApplication app = new FosterApplication();
+            app.setPetId((long) (random.nextInt(generatedPets) + 1));
+            app.setCaregiverId((long) (random.nextInt(generatedUsers) + 1));
+            app.setOwnerId((long) (random.nextInt(generatedUsers) + 1));
+            app.setStatus(statuses[random.nextInt(statuses.length)]);
+            app.setCreateTime(LocalDateTime.now().minusDays(random.nextInt(7)));
+            fosterApplicationMapper.insert(app);
+            generatedApplications++;
+        }
+
+        result.put("users", generatedUsers);
+        result.put("pets", generatedPets);
+        result.put("applications", generatedApplications);
+        result.put("message", "测试数据生成完成");
+
+        return Result.success(result);
+    }
 }
