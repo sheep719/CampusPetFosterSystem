@@ -16,9 +16,9 @@ public class DatabasePropertyInitializer implements ApplicationContextInitialize
     public void initialize(ConfigurableApplicationContext applicationContext) {
         ConfigurableEnvironment env = applicationContext.getEnvironment();
 
-        String mysqlUrl = getFirst(env, "MYSQL_URL", "MYSQLURL", "DATABASE_URL", "");
-        String username = getFirst(env, "MYSQLUSER", "MYSQL_USER", "DATABASE_USERNAME", "root");
-        String password = getFirst(env, "MYSQLPASSWORD", "MYSQL_PASSWORD", "DATABASE_PASSWORD", "");
+        String mysqlUrl = getFirst(env, "DATABASE_URL", "MYSQL_URL", "MYSQLURL", "");
+        String username = getFirst(env, "DATABASE_USERNAME", "MYSQLUSER", "MYSQL_USER", "root");
+        String password = getFirst(env, "DATABASE_PASSWORD", "MYSQLPASSWORD", "MYSQL_PASSWORD", "");
         String host = getFirst(env, "MYSQLHOST", "MYSQL_HOST", "localhost");
         String port = getFirst(env, "MYSQLPORT", "MYSQL_PORT", "3306");
         String database = getFirst(env, "MYSQLDATABASE", "MYSQL_DATABASE", "campus_pet_foster");
