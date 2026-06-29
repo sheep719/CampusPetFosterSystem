@@ -15,6 +15,28 @@ export interface RecentActivities {
   recentHandovers: any[]
 }
 
+export interface ActivityItem {
+  id: number
+  type: string
+  title: string
+  content: string
+  status: string
+  time: string
+}
+
+export interface WeeklyTrend {
+  dates: string[]
+  counts: number[]
+}
+
+export interface TopCaregiver {
+  id: number
+  name: string
+  avgRating: number
+  totalCareCount: number
+  distanceKm: number
+}
+
 export const getDashboardStats = (): Promise<DashboardStats> => {
   return axios.get('/dashboard/stats')
 }
@@ -41,4 +63,16 @@ export const getRecentActivities = (): Promise<RecentActivities> => {
 
 export const getSystemOverview = (): Promise<Record<string, any>> => {
   return axios.get('/dashboard/overview')
+}
+
+export const getWeeklyTrend = (): Promise<WeeklyTrend> => {
+  return axios.get('/dashboard/trend')
+}
+
+export const getRecentActivitiesList = (): Promise<ActivityItem[]> => {
+  return axios.get('/dashboard/recent-activities')
+}
+
+export const getTopCaregivers = (): Promise<TopCaregiver[]> => {
+  return axios.get('/dashboard/top-caregivers')
 }

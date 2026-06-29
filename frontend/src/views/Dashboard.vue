@@ -4,7 +4,11 @@
       <div class="banner-left">
         <h2>管理员你好 👋</h2>
         <p>欢迎来到校园宠物临时寄养管理系统后台</p>
-        <p class="banner-tip">今天有 {{ pendingApplications }} 个待处理申请等待审核 📋</p>
+        <p 
+          class="banner-tip cursor-pointer" 
+          :class="{ 'has-pending': pendingApplications > 0 }"
+          @click="goToPendingApplications"
+        >今天有 {{ pendingApplications }} 个待处理申请等待审核 📋</p>
       </div>
       <div class="banner-right">
         <div class="banner-icon">🐾</div>
@@ -12,7 +16,7 @@
     </div>
 
     <div class="stats-grid">
-      <el-card class="stat-card" shadow="hover">
+      <el-card class="stat-card cursor-pointer" shadow="hover" @click="goToUserManagement">
         <div class="stat-icon user-icon">👥</div>
         <div class="stat-info">
           <p class="stat-value">{{ userCount }}</p>
@@ -22,8 +26,9 @@
           <el-icon><ArrowUp /></el-icon>
           <span>12%</span>
         </div>
+        <div class="stat-arrow"><el-icon><ArrowRight /></el-icon></div>
       </el-card>
-      <el-card class="stat-card" shadow="hover">
+      <el-card class="stat-card cursor-pointer" shadow="hover" @click="goToPetManagement">
         <div class="stat-icon pet-icon">🐾</div>
         <div class="stat-info">
           <p class="stat-value">{{ petCount }}</p>
@@ -33,8 +38,9 @@
           <el-icon><ArrowUp /></el-icon>
           <span>8%</span>
         </div>
+        <div class="stat-arrow"><el-icon><ArrowRight /></el-icon></div>
       </el-card>
-      <el-card class="stat-card" shadow="hover">
+      <el-card class="stat-card cursor-pointer" shadow="hover" @click="goToFosterManagement">
         <div class="stat-icon foster-icon">🏠</div>
         <div class="stat-info">
           <p class="stat-value">{{ fosteringCount }}</p>
@@ -44,8 +50,9 @@
           <el-icon><ArrowDown /></el-icon>
           <span>3%</span>
         </div>
+        <div class="stat-arrow"><el-icon><ArrowRight /></el-icon></div>
       </el-card>
-      <el-card class="stat-card" shadow="hover">
+      <el-card class="stat-card cursor-pointer" shadow="hover" @click="goToPendingApplications">
         <div class="stat-icon app-icon">📝</div>
         <div class="stat-info">
           <p class="stat-value">{{ pendingApplications }}</p>
@@ -55,6 +62,7 @@
           <el-icon><ArrowUp /></el-icon>
           <span>15%</span>
         </div>
+        <div class="stat-arrow"><el-icon><ArrowRight /></el-icon></div>
       </el-card>
     </div>
 
@@ -87,20 +95,20 @@
         </template>
         <div class="chart-container">
           <div class="pie-chart-wrapper">
-            <div class="pie-chart">
-              <div class="pie-inner">
-                <p class="pie-total">{{ petCount }}</p>
-                <p class="pie-label">总计</p>
-              </div>
-            </div>
-            <div class="pie-legend">
-              <div class="legend-item" v-for="item in petTypes" :key="item.name">
-                <span class="legend-dot" :style="{ background: item.color }"></span>
-                <span class="legend-name">{{ item.name }}</span>
-                <span class="legend-value">{{ item.count }}</span>
-              </div>
+          <div class="pie-chart" :style="{ background: pieChartStyle }">
+            <div class="pie-inner">
+              <p class="pie-total">{{ petCount }}</p>
+              <p class="pie-label">总计</p>
             </div>
           </div>
+          <div class="pie-legend">
+            <div class="legend-item" v-for="item in petTypes" :key="item.name">
+              <span class="legend-dot" :style="{ background: item.color }"></span>
+              <span class="legend-name">{{ item.name }}</span>
+              <span class="legend-value">{{ item.count }}</span>
+            </div>
+          </div>
+        </div>
         </div>
       </el-card>
     </div>
@@ -146,9 +154,18 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { ArrowUp, ArrowDown } from '@element-plus/icons-vue'
-import { getDashboardStats, getPetSpeciesDistribution } from '@/api/dashboard'
+import { ref, onMounted, computed } from 'vue'
+import { ArrowUp, ArrowDown, ArrowRight } from '@element-plus/icons-vue'
+import { useRouter } from 'vue-router'
+import { 
+  getDashboardStats, 
+  getPetSpeciesDistribution,
+  getWeeklyTrend,
+  getRecentActivitiesList,
+  getTopCaregivers
+} from '@/api/dashboard'
+
+const router = useRouter()
 
 const userCount = ref(0)
 const petCount = ref(0)
@@ -156,38 +173,58 @@ const fosteringCount = ref(0)
 const pendingApplications = ref(0)
 const loading = ref(false)
 
-const weekData = ref([
-  { day: '周一', count: 12, value: 40 },
-  { day: '周二', count: 18, value: 60 },
-  { day: '周三', count: 15, value: 50 },
-  { day: '周四', count: 22, value: 75 },
-  { day: '周五', count: 28, value: 95 },
-  { day: '周六', count: 25, value: 85 },
-  { day: '周日', count: 20, value: 68 }
-])
+const weekData = ref<{ day: string; count: number; value: number }[]>([])
+const petTypes = ref<{ name: string; count: number; color: string }[]>([])
+const recentActivities = ref<{ text: string; type: string; time: string }[]>([])
+const topCaregivers = ref<{ id: number; name: string; avatar: string; count: number; rating: number }[]>([])
 
-const petTypes = ref([
-  { name: '猫咪', count: 0, color: '#667eea' },
-  { name: '狗狗', count: 0, color: '#f093fb' },
-  { name: '兔子', count: 0, color: '#4facfe' },
-  { name: '其他', count: 0, color: '#43e97b' }
-])
+const weekDays = ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
 
-const recentActivities = ref([
-  { text: '新用户注册成功', type: 'user', time: '刚刚' },
-  { text: '寄养申请提交审核', type: 'application', time: '刚刚' },
-  { text: '完成了一次寄养服务', type: 'complete', time: '刚刚' },
-  { text: '新增宠物信息', type: 'pet', time: '刚刚' },
-  { text: '新的被寄养者通过审核', type: 'user', time: '刚刚' }
-])
+const pieChartStyle = computed(() => {
+  if (petTypes.value.length === 0) return ''
+  const total = petTypes.value.reduce((sum, item) => sum + item.count, 0)
+  let currentAngle = 0
+  const gradients = petTypes.value.map(item => {
+    const percentage = (item.count / total) * 100
+    const startAngle = currentAngle
+    const endAngle = currentAngle + percentage
+    currentAngle = endAngle
+    return `${item.color} ${startAngle}% ${endAngle}%`
+  })
+  return `conic-gradient(${gradients.join(', ')})`
+})
 
-const topCaregivers = ref([
-  { id: 1, name: '李阿姨', avatar: '👩', count: 25, rating: 4.9 },
-  { id: 2, name: '张奶奶', avatar: '👵', count: 22, rating: 4.8 },
-  { id: 3, name: '王叔叔', avatar: '👨', count: 18, rating: 4.7 },
-  { id: 4, name: '赵阿姨', avatar: '👩', count: 15, rating: 4.6 },
-  { id: 5, name: '钱爷爷', avatar: '👴', count: 12, rating: 4.5 }
-])
+const goToPendingApplications = () => {
+  router.push('/foster-application')
+}
+
+const goToUserManagement = () => {
+  router.push('/user-management')
+}
+
+const goToPetManagement = () => {
+  router.push('/pet-management')
+}
+
+const goToFosterManagement = () => {
+  router.push('/foster-application')
+}
+
+const formatTime = (timeStr: string): string => {
+  if (!timeStr) return '未知时间'
+  const date = new Date(timeStr)
+  const now = new Date()
+  const diff = now.getTime() - date.getTime()
+  const minutes = Math.floor(diff / 60000)
+  const hours = Math.floor(diff / 3600000)
+  const days = Math.floor(diff / 86400000)
+  
+  if (minutes < 1) return '刚刚'
+  if (minutes < 60) return `${minutes}分钟前`
+  if (hours < 24) return `${hours}小时前`
+  if (days < 7) return `${days}天前`
+  return date.toLocaleDateString('zh-CN')
+}
 
 const loadStats = async () => {
   loading.value = true
@@ -219,6 +256,31 @@ const loadStats = async () => {
       name: speciesMap[key] || key,
       count: count as number,
       color: colorMap[key] || '#909399'
+    }))
+
+    const trend = await getWeeklyTrend()
+    const maxCount = Math.max(...trend.counts, 1)
+    weekData.value = trend.dates.map((date, index) => ({
+      day: weekDays[index % 7],
+      count: trend.counts[index],
+      value: (trend.counts[index] / maxCount) * 100
+    }))
+
+    const activities = await getRecentActivitiesList()
+    recentActivities.value = activities.map(item => ({
+      text: item.content,
+      type: item.type === 'application' ? 'application' : 
+            item.type === 'handover' ? 'complete' : 'user',
+      time: formatTime(item.time)
+    }))
+
+    const caregivers = await getTopCaregivers()
+    topCaregivers.value = caregivers.map(item => ({
+      id: item.id,
+      name: item.name,
+      avatar: '👤',
+      count: item.totalCareCount,
+      rating: item.avgRating
     }))
   } catch (error) {
     console.error('加载统计数据失败:', error)
@@ -267,6 +329,25 @@ onMounted(() => {
   display: inline-block;
   padding: 6px 14px;
   border-radius: 20px;
+  transition: all 0.3s ease;
+}
+
+.cursor-pointer {
+  cursor: pointer;
+}
+
+.banner-tip.cursor-pointer:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: translateX(4px);
+}
+
+.banner-tip.has-pending {
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { background: rgba(255, 255, 255, 0.2); }
+  50% { background: rgba(255, 255, 255, 0.4); }
 }
 
 .banner-icon {
@@ -351,6 +432,20 @@ onMounted(() => {
 .stat-trend.down {
   color: #f56c6c;
   background: #fef0f0;
+}
+
+.stat-arrow {
+  position: absolute;
+  bottom: 16px;
+  right: 16px;
+  color: #c0c4cc;
+  font-size: 16px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.stat-card:hover .stat-arrow {
+  opacity: 1;
 }
 
 .content-grid {

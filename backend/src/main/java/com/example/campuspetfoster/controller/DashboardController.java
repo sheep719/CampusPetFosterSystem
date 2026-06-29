@@ -8,10 +8,10 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
 
 @RestController
 @RequestMapping("/api/dashboard")
@@ -22,17 +22,20 @@ public class DashboardController {
     private final FosterLocationMapper fosterLocationMapper;
     private final SysUserMapper sysUserMapper;
     private final HandoverRecordMapper handoverRecordMapper;
+    private final PetCaregiverProfileMapper caregiverProfileMapper;
 
     public DashboardController(PetMapper petMapper,
                                FosterApplicationMapper fosterApplicationMapper,
                                FosterLocationMapper fosterLocationMapper,
                                SysUserMapper sysUserMapper,
-                               HandoverRecordMapper handoverRecordMapper) {
+                               HandoverRecordMapper handoverRecordMapper,
+                               PetCaregiverProfileMapper caregiverProfileMapper) {
         this.petMapper = petMapper;
         this.fosterApplicationMapper = fosterApplicationMapper;
         this.fosterLocationMapper = fosterLocationMapper;
         this.sysUserMapper = sysUserMapper;
         this.handoverRecordMapper = handoverRecordMapper;
+        this.caregiverProfileMapper = caregiverProfileMapper;
     }
 
     /**
@@ -236,5 +239,113 @@ public class DashboardController {
         }
 
         return Result.success(overview);
+    }
+
+    /**
+     * 获取近7天寄养申请趋势
+     */
+    @GetMapping("/trend")
+    public Result<Map<String, Object>> getWeeklyTrend() {
+        Map<String, Object> trend = new HashMap<>();
+        List<String> dates = new ArrayList<>();
+        List<Long> counts = new ArrayList<>();
+
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MM-dd");
+        LocalDate today = LocalDate.now();
+
+        for (int i = 6; i >= 0; i--) {
+            LocalDate date = today.minusDays(i);
+            dates.add(date.format(formatter));
+
+            LocalDateTime startOfDay = date.atStartOfDay();
+            LocalDateTime endOfDay = date.plusDays(1).atStartOfDay();
+
+            LambdaQueryWrapper<FosterApplication> wrapper = new LambdaQueryWrapper<>();
+            wrapper.ge(FosterApplication::getCreateTime, startOfDay);
+            wrapper.lt(FosterApplication::getCreateTime, endOfDay);
+            counts.add(fosterApplicationMapper.selectCount(wrapper));
+        }
+
+        trend.put("dates", dates);
+        trend.put("counts", counts);
+
+        return Result.success(trend);
+    }
+
+    /**
+     * 获取最近活动列表
+     */
+    @GetMapping("/recent-activities")
+    public Result<List<Map<String, Object>>> getRecentActivitiesList() {
+        List<Map<String, Object>> activities = new ArrayList<>();
+
+        LambdaQueryWrapper<FosterApplication> applicationWrapper = new LambdaQueryWrapper<>();
+        applicationWrapper.orderByDesc(FosterApplication::getCreateTime);
+        applicationWrapper.last("LIMIT 10");
+        List<FosterApplication> recentApplications = fosterApplicationMapper.selectList(applicationWrapper);
+
+        for (FosterApplication app : recentApplications) {
+            Map<String, Object> activity = new HashMap<>();
+            activity.put("id", app.getId());
+            activity.put("type", "application");
+            activity.put("title", "寄养申请");
+            activity.put("content", "宠物寄养申请 #" + app.getId());
+            activity.put("status", app.getStatus());
+            activity.put("time", app.getCreateTime());
+            activities.add(activity);
+        }
+
+        LambdaQueryWrapper<HandoverRecord> handoverWrapper = new LambdaQueryWrapper<>();
+        handoverWrapper.orderByDesc(HandoverRecord::getHandoverTime);
+        handoverWrapper.last("LIMIT 10");
+        List<HandoverRecord> recentHandovers = handoverRecordMapper.selectList(handoverWrapper);
+
+        for (HandoverRecord record : recentHandovers) {
+            Map<String, Object> activity = new HashMap<>();
+            activity.put("id", record.getId());
+            activity.put("type", "handover");
+            activity.put("title", "交接记录");
+            activity.put("content", record.getHandoverType().equals("pickup") ? "宠物领取" : "宠物归还");
+            activity.put("status", "completed");
+            activity.put("time", record.getHandoverTime());
+            activities.add(activity);
+        }
+
+        activities.sort((a, b) -> {
+            LocalDateTime timeA = (LocalDateTime) a.get("time");
+            LocalDateTime timeB = (LocalDateTime) b.get("time");
+            return timeB.compareTo(timeA);
+        });
+
+        if (activities.size() > 10) {
+            activities = activities.subList(0, 10);
+        }
+
+        return Result.success(activities);
+    }
+
+    /**
+     * 获取寄养达人榜
+     */
+    @GetMapping("/top-caregivers")
+    public Result<List<Map<String, Object>>> getTopCaregivers() {
+        List<Map<String, Object>> topCaregivers = new ArrayList<>();
+
+        LambdaQueryWrapper<PetCaregiverProfile> wrapper = new LambdaQueryWrapper<>();
+        wrapper.orderByDesc(PetCaregiverProfile::getTotalCareCount);
+        wrapper.last("LIMIT 10");
+        List<PetCaregiverProfile> caregivers = caregiverProfileMapper.selectList(wrapper);
+
+        for (PetCaregiverProfile caregiver : caregivers) {
+            Map<String, Object> item = new HashMap<>();
+            item.put("id", caregiver.getId());
+            item.put("name", caregiver.getName());
+            item.put("avgRating", caregiver.getAvgRating());
+            item.put("totalCareCount", caregiver.getTotalCareCount());
+            item.put("distanceKm", caregiver.getDistanceToSchoolKm());
+            topCaregivers.add(item);
+        }
+
+        return Result.success(topCaregivers);
     }
 }
