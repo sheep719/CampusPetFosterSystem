@@ -20,6 +20,8 @@ export interface LocationListParams {
   locationName?: string
   available?: number
   acceptedSpecies?: string
+  species?: string
+  address?: string
 }
 
 export interface LocationListResponse {

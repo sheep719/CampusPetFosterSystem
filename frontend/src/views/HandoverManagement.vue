@@ -223,6 +223,8 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox, type FormInstance } from 'element-plus'
 import { Search, Refresh, View, Check, Picture, Plus } from '@element-plus/icons-vue'
+import { getHandoverList, confirmHandover } from '@/api/handoverRecord'
+import type { HandoverRecord } from '@/api/handoverRecord'
 
 const loading = ref(false)
 const detailVisible = ref(false)
@@ -276,49 +278,42 @@ const getSpeciesTagType = (species: string) => {
   return map[species] || 'info'
 }
 
-const mockPhotos = [
-  'https://via.placeholder.com/300x200?text=Photo1',
-  'https://via.placeholder.com/300x200?text=Photo2',
-  'https://via.placeholder.com/300x200?text=Photo3'
-]
-
-const mockData = [
-  { id: 1, handoverNo: 'HO202401001', applicationNo: 'FA202401001', petName: '咪咪', petSpecies: 'cat', petSpeciesLabel: '猫', ownerName: '张三', caregiverName: '李阿姨', type: 'delivery', handoverDate: '2024-01-15', handoverTime: '09:00', location: '学校东门', status: 'completed', notes: '宠物状态良好，已确认交接', photos: mockPhotos, ownerConfirmed: true, ownerConfirmTime: '2024-01-15 09:05', caregiverConfirmed: true, caregiverConfirmTime: '2024-01-15 09:10' },
-  { id: 2, handoverNo: 'HO202401002', applicationNo: 'FA202401001', petName: '咪咪', petSpecies: 'cat', petSpeciesLabel: '猫', ownerName: '张三', caregiverName: '李阿姨', type: 'pickup', handoverDate: '2024-01-20', handoverTime: '18:00', location: '学校东门', status: 'completed', notes: '宠物状态良好，已接回', photos: mockPhotos.slice(0, 2), ownerConfirmed: true, ownerConfirmTime: '2024-01-20 18:05', caregiverConfirmed: true, caregiverConfirmTime: '2024-01-20 18:10' },
-  { id: 3, handoverNo: 'HO202401003', applicationNo: 'FA202401002', petName: '旺财', petSpecies: 'dog', petSpeciesLabel: '狗', ownerName: '李四', caregiverName: '王奶奶', type: 'delivery', handoverDate: '2024-01-18', handoverTime: '10:00', location: '学校西门', status: 'completed', notes: '狗狗很活泼，已带好狗粮', photos: mockPhotos, ownerConfirmed: true, ownerConfirmTime: '2024-01-18 10:05', caregiverConfirmed: true, caregiverConfirmTime: '2024-01-18 10:15' },
-  { id: 4, handoverNo: 'HO202401004', applicationNo: 'FA202401003', petName: '雪球', petSpecies: 'rabbit', petSpeciesLabel: '兔子', ownerName: '王五', caregiverName: '陈阿姨', type: 'delivery', handoverDate: '2024-01-22', handoverTime: '14:00', location: '学校北门', status: 'pending', notes: '', photos: [], ownerConfirmed: false, ownerConfirmTime: '', caregiverConfirmed: false, caregiverConfirmTime: '' },
-  { id: 5, handoverNo: 'HO202401005', applicationNo: 'FA202401004', petName: '橘子', petSpecies: 'cat', petSpeciesLabel: '猫', ownerName: '赵六', caregiverName: '刘大哥', type: 'delivery', handoverDate: '2024-01-25', handoverTime: '08:30', location: '学校南门', status: 'pending', notes: '', photos: [], ownerConfirmed: false, ownerConfirmTime: '', caregiverConfirmed: false, caregiverConfirmTime: '' },
-  { id: 6, handoverNo: 'HO202401006', applicationNo: 'FA202401002', petName: '旺财', petSpecies: 'dog', petSpeciesLabel: '狗', ownerName: '李四', caregiverName: '王奶奶', type: 'pickup', handoverDate: '2024-01-25', handoverTime: '17:00', location: '学校西门', status: 'pending', notes: '', photos: [], ownerConfirmed: false, ownerConfirmTime: '', caregiverConfirmed: false, caregiverConfirmTime: '' },
-  { id: 7, handoverNo: 'HO202401007', applicationNo: 'FA202401005', petName: '可乐', petSpecies: 'dog', petSpeciesLabel: '狗', ownerName: '钱七', caregiverName: '孙阿姨', type: 'delivery', handoverDate: '2024-01-28', handoverTime: '11:00', location: '学校东门', status: 'pending', notes: '', photos: [], ownerConfirmed: false, ownerConfirmTime: '', caregiverConfirmed: false, caregiverConfirmTime: '' }
-]
-
-const loadData = () => {
+const loadData = async () => {
   loading.value = true
-  setTimeout(() => {
-    let filtered = [...mockData]
-    if (searchForm.handoverNo) {
-      filtered = filtered.filter(item => item.handoverNo.includes(searchForm.handoverNo))
-    }
-    if (searchForm.type) {
-      filtered = filtered.filter(item => item.type === searchForm.type)
-    }
-    if (searchForm.status) {
-      filtered = filtered.filter(item => item.status === searchForm.status)
-    }
-    if (searchForm.date && searchForm.date.length === 2) {
-      const start = new Date(searchForm.date[0])
-      const end = new Date(searchForm.date[1])
-      filtered = filtered.filter(item => {
-        const date = new Date(item.handoverDate)
-        return date >= start && date <= end
-      })
-    }
-    pagination.total = filtered.length
-    const start = (pagination.page - 1) * pagination.pageSize
-    const end = start + pagination.pageSize
-    tableData.value = filtered.slice(start, end)
+  try {
+    const res = await getHandoverList({
+      page: pagination.page,
+      size: pagination.pageSize,
+      type: searchForm.type || undefined,
+      status: searchForm.status || undefined
+    })
+    pagination.total = res.total
+    tableData.value = res.list.map((item: HandoverRecord) => ({
+      ...item,
+      handoverNo: 'HO' + item.id.toString().padStart(8, '0'),
+      applicationNo: 'FA' + item.applicationId.toString().padStart(8, '0'),
+      petName: '宠物' + item.petId,
+      petSpecies: 'cat',
+      petSpeciesLabel: '猫',
+      ownerName: '寄养者' + item.ownerId,
+      caregiverName: '被寄养者' + item.caregiverId,
+      type: item.handoverType === 'delivery' ? 'delivery' : 'pickup',
+      handoverDate: item.handoverTime ? item.handoverTime.substring(0, 10) : '-',
+      handoverTime: item.handoverTime ? item.handoverTime.substring(11, 16) : '-',
+      location: item.location || '-',
+      status: item.status === 'completed' ? 'completed' : 'pending',
+      notes: item.notes || '',
+      photos: [],
+      ownerConfirmed: item.ownerConfirmed === 1,
+      ownerConfirmTime: '-',
+      caregiverConfirmed: item.caregiverConfirmed === 1,
+      caregiverConfirmTime: '-'
+    }))
+  } catch (error) {
+    ElMessage.error('加载数据失败')
+  } finally {
     loading.value = false
-  }, 300)
+  }
 }
 
 const handleSearch = () => {
@@ -387,8 +382,18 @@ const handleSubmitConfirm = async () => {
     confirmButtonText: '确定',
     cancelButtonText: '取消',
     type: 'warning'
-  }).then(() => {
-    ElMessage.success('交接已确认')
+  }).then(async () => {
+    try {
+      if (currentHandover.value) {
+        await confirmHandover(currentHandover.value.id, {
+          location: confirmForm.location,
+          notes: confirmForm.notes
+        })
+        ElMessage.success('交接已确认')
+      }
+    } catch (error) {
+      ElMessage.error('确认失败')
+    }
     confirmVisible.value = false
     loadData()
   }).catch(() => {})

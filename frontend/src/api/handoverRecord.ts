@@ -9,6 +9,14 @@ export interface HandoverRecord {
   toPerson: string
   remark: string
   photoUrl: string
+  petId?: number
+  ownerId?: number
+  caregiverId?: number
+  location?: string
+  status?: string
+  notes?: string
+  ownerConfirmed?: number
+  caregiverConfirmed?: number
 }
 
 export interface RecordListParams {
@@ -16,6 +24,8 @@ export interface RecordListParams {
   size?: number
   applicationId?: number
   handoverType?: string
+  type?: string
+  status?: string
 }
 
 export interface RecordListResponse {
@@ -25,6 +35,12 @@ export interface RecordListResponse {
 
 export const getHandoverRecordList = (params: RecordListParams = {}): Promise<RecordListResponse> => {
   return axios.get('/handover-records', { params })
+}
+
+export const getHandoverList = getHandoverRecordList
+
+export const confirmHandover = (id: number, data: { location?: string; notes?: string }): Promise<HandoverRecord> => {
+  return axios.put(`/handover-records/${id}/confirm`, data)
 }
 
 export const getRecordsByApplication = (applicationId: number): Promise<HandoverRecord[]> => {

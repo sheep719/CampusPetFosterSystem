@@ -25,6 +25,7 @@ export interface ApplicationListParams {
   status?: string
   ownerId?: number
   caregiverId?: number
+  petName?: string
 }
 
 export interface ApplicationListResponse {

@@ -153,6 +153,8 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, type FormInstance } from 'element-plus'
 import { Search, Refresh, View, Check, Close } from '@element-plus/icons-vue'
+import { getApplicationList, reviewApplication } from '@/api/fosterApplication'
+import type { FosterApplication } from '@/api/fosterApplication'
 
 const loading = ref(false)
 const detailVisible = ref(false)
@@ -247,41 +249,46 @@ const getStatusTagType = (status: string) => {
   return map[status] || 'info'
 }
 
-const mockData = [
-  { id: 1, orderNo: 'FOSTER20260625001', petName: '咪咪', species: 'cat', breed: '英短', age: 2, ownerName: '张三', ownerPhone: '13800138001', caregiverName: '李阿姨', locationName: '李阿姨温馨小屋', startDate: '2026-06-26', endDate: '2026-07-02', days: 7, totalPrice: 420, status: 'pending', createTime: '2026-06-25 09:30:00', petNotes: '性格温顺，喜欢吃猫粮' },
-  { id: 2, orderNo: 'FOSTER20260625002', petName: '旺财', species: 'dog', breed: '金毛', age: 3, ownerName: '李四', ownerPhone: '13800138002', caregiverName: '张叔叔', locationName: '张叔叔宠物之家', startDate: '2026-06-27', endDate: '2026-07-04', days: 8, totalPrice: 400, status: 'pending', createTime: '2026-06-25 10:15:00', petNotes: '活泼好动，每天需要遛两次' },
-  { id: 3, orderNo: 'FOSTER20260625003', petName: '雪球', species: 'rabbit', breed: '垂耳兔', age: 1, ownerName: '王五', ownerPhone: '13800138003', caregiverName: '王奶奶', locationName: '王奶奶仓鼠乐园', startDate: '2026-06-28', endDate: '2026-07-01', days: 4, totalPrice: 120, status: 'approved', createTime: '2026-06-25 11:00:00', auditTime: '2026-06-25 11:30:00', petNotes: '胆小，需要安静环境' },
-  { id: 4, orderNo: 'FOSTER20260625004', petName: '小仓鼠', species: 'hamster', breed: '金丝熊', age: 0.5, ownerName: '赵六', ownerPhone: '13800138004', caregiverName: '孙阿姨', locationName: '孙阿姨萌宠乐园', startDate: '2026-06-25', endDate: '2026-06-30', days: 6, totalPrice: 270, status: 'fostering', createTime: '2026-06-24 14:00:00', auditTime: '2026-06-24 14:30:00', petNotes: '最近有点食欲不振' },
-  { id: 5, orderNo: 'FOSTER20260625005', petName: '橘子', species: 'cat', breed: '橘猫', age: 4, ownerName: '钱七', ownerPhone: '13800138005', caregiverName: '陈阿姨', locationName: '陈阿姨猫咪公寓', startDate: '2026-06-20', endDate: '2026-06-25', days: 6, totalPrice: 330, status: 'completed', createTime: '2026-06-19 10:00:00', auditTime: '2026-06-19 10:30:00', petNotes: '爱吃，容易长胖' },
-  { id: 6, orderNo: 'FOSTER20260625006', petName: '可乐', species: 'dog', breed: '柯基', age: 2, ownerName: '孙八', ownerPhone: '13800138006', caregiverName: '刘大哥', locationName: '刘大哥宠物旅馆', startDate: '2026-06-25', endDate: '2026-07-01', days: 7, totalPrice: 490, status: 'rejected', createTime: '2026-06-24 16:00:00', auditTime: '2026-06-24 16:30:00', auditRemark: '寄养点已满', petNotes: '短腿，跑不快' },
-  { id: 7, orderNo: 'FOSTER20260625007', petName: '皮皮', species: 'bird', breed: '玄凤鹦鹉', age: 1, ownerName: '周九', ownerPhone: '13800138007', caregiverName: '吴阿姨', locationName: '吴阿姨小鸟屋', startDate: '2026-06-29', endDate: '2026-07-06', days: 8, totalPrice: 200, status: 'pending', createTime: '2026-06-25 14:00:00', petNotes: '会说话' },
-  { id: 8, orderNo: 'FOSTER20260625008', petName: '忍者', species: 'turtle', breed: '巴西龟', age: 5, ownerName: '吴十', ownerPhone: '13800138008', caregiverName: '赵姐', locationName: '赵姐乌龟池', startDate: '2026-06-25', endDate: '2026-07-05', days: 11, totalPrice: 220, status: 'fostering', createTime: '2026-06-24 09:00:00', auditTime: '2026-06-24 09:30:00', petNotes: '喜欢晒太阳' },
-  { id: 9, orderNo: 'FOSTER20260625009', petName: '小黑', species: 'cat', breed: '黑猫', age: 1, ownerName: '郑十一', ownerPhone: '13800138009', caregiverName: '李阿姨', locationName: '李阿姨温馨小屋', startDate: '2026-06-30', endDate: '2026-07-07', days: 8, totalPrice: 480, status: 'pending', createTime: '2026-06-25 15:30:00', petNotes: '感冒中，正在治疗' },
-  { id: 10, orderNo: 'FOSTER20260625010', petName: '大白', species: 'dog', breed: '萨摩耶', age: 2, ownerName: '王十二', ownerPhone: '13800138010', caregiverName: '周叔叔', locationName: '周叔叔犬舍', startDate: '2026-06-22', endDate: '2026-06-28', days: 7, totalPrice: 560, status: 'cancelled', createTime: '2026-06-21 10:00:00', petNotes: '毛发雪白，需要经常打理' }
-]
-
-const loadData = () => {
+const loadData = async () => {
   loading.value = true
-  setTimeout(() => {
-    let filtered = [...mockData]
-    if (searchForm.orderNo) {
-      filtered = filtered.filter(item => item.orderNo.includes(searchForm.orderNo))
-    }
-    if (searchForm.petName) {
-      filtered = filtered.filter(item => item.petName.includes(searchForm.petName))
-    }
-    if (searchForm.ownerName) {
-      filtered = filtered.filter(item => item.ownerName.includes(searchForm.ownerName))
-    }
-    if (searchForm.status) {
-      filtered = filtered.filter(item => item.status === searchForm.status)
-    }
-    pagination.total = filtered.length
-    const start = (pagination.page - 1) * pagination.pageSize
-    const end = start + pagination.pageSize
-    tableData.value = filtered.slice(start, end)
+  try {
+    const res = await getApplicationList({
+      page: pagination.page,
+      size: pagination.pageSize,
+      petName: searchForm.petName || undefined,
+      status: searchForm.status || undefined
+    })
+    pagination.total = res.total
+    tableData.value = res.list.map((item: FosterApplication) => {
+      const start = new Date(item.startTime)
+      const end = new Date(item.expectedEndTime)
+      const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24))
+      return {
+        ...item,
+        orderNo: 'FOSTER' + item.id.toString().padStart(10, '0'),
+        petName: '宠物' + item.petId,
+        species: 'cat',
+        breed: '-',
+        age: 1,
+        ownerName: '寄养者' + item.ownerId,
+        ownerPhone: '-',
+        caregiverName: '被寄养者' + item.caregiverId,
+        locationName: '寄养点' + item.locationId,
+        startDate: item.startTime.substring(0, 10),
+        endDate: item.expectedEndTime.substring(0, 10),
+        days: days > 0 ? days : 1,
+        totalPrice: days * 50,
+        createTime: item.createTime || '-',
+        auditTime: '-',
+        auditRemark: item.rejectReason || '-',
+        petNotes: item.careNote || '-'
+      }
+    })
+  } catch (error) {
+    ElMessage.error('加载数据失败')
+  } finally {
     loading.value = false
-  }, 300)
+  }
 }
 
 const handleSearch = () => {
@@ -346,10 +353,17 @@ const handleReject = (row: any) => {
   auditVisible.value = true
 }
 
-const handleAuditSubmit = () => {
-  ElMessage.success(isApprove.value ? '申请已通过' : '申请已拒绝')
-  auditVisible.value = false
-  loadData()
+const handleAuditSubmit = async () => {
+  try {
+    if (currentAuditRow.value) {
+      await reviewApplication(currentAuditRow.value.id, isApprove.value, auditForm.remark)
+      ElMessage.success(isApprove.value ? '申请已通过' : '申请已拒绝')
+    }
+    auditVisible.value = false
+    loadData()
+  } catch (error) {
+    ElMessage.error('审核失败')
+  }
 }
 
 onMounted(() => {

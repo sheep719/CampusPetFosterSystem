@@ -222,6 +222,8 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
 import { Search, Refresh, Plus, Edit, Delete, View } from '@element-plus/icons-vue'
+import { getLocationList, createLocation, updateLocation, deleteLocation } from '@/api/fosterLocation'
+import type { FosterLocation } from '@/api/fosterLocation'
 
 const loading = ref(false)
 const dialogVisible = ref(false)
@@ -300,48 +302,40 @@ const getSpeciesTagType = (species: string) => {
   return map[species] || 'info'
 }
 
-const mockData = [
-  { id: 1, locationName: '李阿姨温馨小屋', caregiverName: '李阿姨', caregiverPhone: '13800138011', address: '阳光小区3号楼201室', distance: 1.2, capacity: 5, currentCount: 2, acceptedSpecies: ['cat', 'dog'], price: 60, rating: 4.8, available: '1', description: '小区环境优美，有独立小院供宠物活动，每天定时遛狗' },
-  { id: 2, locationName: '张叔叔宠物之家', caregiverName: '张叔叔', caregiverPhone: '13800138012', address: '幸福路88号', distance: 2.5, capacity: 8, currentCount: 4, acceptedSpecies: ['cat', 'dog', 'rabbit'], price: 50, rating: 4.5, available: '1', description: '专业宠物寄养，提供猫粮狗粮，24小时监控' },
-  { id: 3, locationName: '王奶奶仓鼠乐园', caregiverName: '王奶奶', caregiverPhone: '13800138013', address: '和谐花园5号楼102室', distance: 3.0, capacity: 10, currentCount: 3, acceptedSpecies: ['hamster', 'rabbit'], price: 30, rating: 4.9, available: '1', description: '专门照顾小宠，环境安静，温度适宜' },
-  { id: 4, locationName: '陈阿姨猫咪公寓', caregiverName: '陈阿姨', caregiverPhone: '13800138014', address: '锦绣苑12号楼302室', distance: 1.8, capacity: 6, currentCount: 6, acceptedSpecies: ['cat'], price: 55, rating: 4.7, available: '0', description: '猫咪专属空间，有猫爬架和玩具' },
-  { id: 5, locationName: '刘大哥宠物旅馆', caregiverName: '刘大哥', caregiverPhone: '13800138015', address: '学府路100号', distance: 0.8, capacity: 4, currentCount: 1, acceptedSpecies: ['cat', 'dog', 'bird'], price: 70, rating: 4.6, available: '1', description: '离学校最近，方便探望，提供接送服务' },
-  { id: 6, locationName: '赵姐乌龟池', caregiverName: '赵姐', caregiverPhone: '13800138016', address: '碧水湾小区', distance: 4.2, capacity: 15, currentCount: 8, acceptedSpecies: ['turtle'], price: 20, rating: 4.4, available: '1', description: '有大型水池，阳光充足，专业养龟' },
-  { id: 7, locationName: '孙阿姨萌宠乐园', caregiverName: '孙阿姨', caregiverPhone: '13800138017', address: '绿园小区2号楼', distance: 2.0, capacity: 7, currentCount: 3, acceptedSpecies: ['cat', 'dog', 'rabbit', 'hamster'], price: 45, rating: 4.8, available: '1', description: '家庭式寄养，如同家一般温暖' },
-  { id: 8, locationName: '周叔叔犬舍', caregiverName: '周叔叔', caregiverPhone: '13800138018', address: '郊外农场', distance: 5.5, capacity: 20, currentCount: 10, acceptedSpecies: ['dog'], price: 80, rating: 4.3, available: '1', description: '大型户外场地，适合运动量较大的狗狗' },
-  { id: 9, locationName: '吴阿姨小鸟屋', caregiverName: '吴阿姨', caregiverPhone: '13800138019', address: '蓝天小区', distance: 3.5, capacity: 6, currentCount: 2, acceptedSpecies: ['bird'], price: 25, rating: 4.5, available: '1', description: '专业鸟类照顾，提供鸟食和清洁服务' },
-  { id: 10, locationName: '郑奶奶爱心之家', caregiverName: '郑奶奶', caregiverPhone: '13800138020', address: '温馨家园', distance: 2.8, capacity: 5, currentCount: 5, acceptedSpecies: ['cat', 'dog'], price: 55, rating: 4.7, available: '0', description: '目前已满，接受预约' }
-]
-
-const loadData = () => {
+const loadData = async () => {
   loading.value = true
-  setTimeout(() => {
-    let filtered = [...mockData]
-    if (searchForm.locationName) {
-      filtered = filtered.filter(item => item.locationName.includes(searchForm.locationName))
-    }
-    if (searchForm.address) {
-      filtered = filtered.filter(item => item.address.includes(searchForm.address))
-    }
-    if (searchForm.acceptedSpecies) {
-      filtered = filtered.filter(item => item.acceptedSpecies.includes(searchForm.acceptedSpecies))
-    }
-    if (searchForm.available) {
-      filtered = filtered.filter(item => item.available === searchForm.available)
-    }
-    pagination.total = filtered.length
-    const start = (pagination.page - 1) * pagination.pageSize
-    const end = start + pagination.pageSize
-    tableData.value = filtered.slice(start, end).map(item => ({
+  try {
+    const res = await getLocationList({
+      page: pagination.page,
+      size: pagination.pageSize,
+      locationName: searchForm.locationName || undefined,
+      address: searchForm.address || undefined,
+      species: searchForm.acceptedSpecies || undefined,
+      available: searchForm.available ? Number(searchForm.available) : undefined
+    })
+    pagination.total = res.total
+    tableData.value = res.list.map((item: FosterLocation) => ({
       ...item,
-      availableCount: item.capacity - item.currentCount,
-      acceptedSpeciesList: item.acceptedSpecies.map((s: string) => ({
+      distance: item.distanceKm || 0,
+      price: 50,
+      rating: 4.5,
+      currentCount: 0,
+      caregiverName: '负责人' + item.caregiverId,
+      caregiverPhone: '-',
+      availableCount: item.capacity - 0,
+      acceptedSpecies: item.acceptedSpecies ? item.acceptedSpecies.split(',') : [],
+      acceptedSpeciesList: (item.acceptedSpecies ? item.acceptedSpecies.split(',') : []).map((s: string) => ({
         value: s,
-        label: speciesMap[s]
-      }))
+        label: speciesMap[s] || s
+      })),
+      description: item.costDesc || '-',
+      available: item.available ? '1' : '0'
     }))
+  } catch (error) {
+    ElMessage.error('加载数据失败')
+  } finally {
     loading.value = false
-  }, 300)
+  }
 }
 
 const handleSearch = () => {
@@ -420,13 +414,39 @@ const handleView = (row: any) => {
 
 const handleSubmit = async () => {
   await formRef.value?.validate()
-  ElMessage.success(isEdit.value ? '修改成功' : '新增成功')
-  dialogVisible.value = false
-  loadData()
+  try {
+    const data = {
+      locationName: form.locationName,
+      address: form.address,
+      distanceKm: form.distance,
+      capacity: form.capacity,
+      acceptedSpecies: form.acceptedSpecies.join(','),
+      carePeriod: '长期',
+      costDesc: form.description,
+      available: form.available === '1' ? 1 : 0
+    }
+    if (isEdit.value && form.id) {
+      await updateLocation(form.id, data)
+      ElMessage.success('修改成功')
+    } else {
+      await createLocation(data)
+      ElMessage.success('新增成功')
+    }
+    dialogVisible.value = false
+    loadData()
+  } catch (error) {
+    ElMessage.error('操作失败')
+  }
 }
 
-const handleStatusChange = (row: any) => {
-  ElMessage.success(row.available === '1' ? '已开启接单' : '已关闭接单')
+const handleStatusChange = async (row: any) => {
+  try {
+    await updateLocation(row.id, { available: row.available === '1' ? 1 : 0 })
+    ElMessage.success(row.available === '1' ? '已开启接单' : '已关闭接单')
+  } catch (error) {
+    row.available = row.available === '1' ? '0' : '1'
+    ElMessage.error('操作失败')
+  }
 }
 
 const handleDelete = (row: any) => {
@@ -438,9 +458,14 @@ const handleDelete = (row: any) => {
     confirmButtonText: '确定',
     cancelButtonText: '取消',
     type: 'warning'
-  }).then(() => {
-    ElMessage.success('删除成功')
-    loadData()
+  }).then(async () => {
+    try {
+      await deleteLocation(row.id)
+      ElMessage.success('删除成功')
+      loadData()
+    } catch (error) {
+      ElMessage.error('删除失败')
+    }
   }).catch(() => {})
 }
 

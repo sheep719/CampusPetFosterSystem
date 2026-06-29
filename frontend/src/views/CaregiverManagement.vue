@@ -151,6 +151,8 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Refresh, View, Check, Delete } from '@element-plus/icons-vue'
+import { getUserList, updateUser } from '@/api/user'
+import type { User } from '@/api/user'
 
 const loading = ref(false)
 const detailVisible = ref(false)
@@ -203,44 +205,35 @@ const getSpeciesTagType = (species: string) => {
   return map[species] || 'info'
 }
 
-const mockData = [
-  { id: 1, name: '李阿姨', phone: '13800138011', address: '阳光小区3号楼201室', distance: 1.2, careTypes: ['cat', 'dog'], experience: 5, avgRating: 4.8, serviceCount: 42, certified: '1', enabled: '1', introduction: '退休后开始照顾邻居家的宠物，有丰富的养猫养狗经验' },
-  { id: 2, name: '张叔叔', phone: '13800138012', address: '幸福路88号', distance: 2.5, careTypes: ['cat', 'dog', 'rabbit'], experience: 3, avgRating: 4.5, serviceCount: 28, certified: '1', enabled: '1', introduction: '专业宠物护理员，持有宠物护理证书' },
-  { id: 3, name: '王奶奶', phone: '13800138013', address: '和谐花园5号楼102室', distance: 3.0, careTypes: ['hamster', 'rabbit'], experience: 2, avgRating: 4.9, serviceCount: 15, certified: '1', enabled: '1', introduction: '喜欢小动物，专门照顾小宠物' },
-  { id: 4, name: '陈阿姨', phone: '13800138014', address: '锦绣苑12号楼302室', distance: 1.8, careTypes: ['cat'], experience: 4, avgRating: 4.7, serviceCount: 35, certified: '1', enabled: '1', introduction: '猫咪爱好者，家里有猫爬架和各种猫玩具' },
-  { id: 5, name: '刘大哥', phone: '13800138015', address: '学府路100号', distance: 0.8, careTypes: ['cat', 'dog', 'bird'], experience: 6, avgRating: 4.6, serviceCount: 56, certified: '1', enabled: '1', introduction: '离学校最近，方便学生探望，提供接送服务' },
-  { id: 6, name: '赵姐', phone: '13800138016', address: '碧水湾小区', distance: 4.2, careTypes: ['turtle'], experience: 8, avgRating: 4.4, serviceCount: 12, certified: '1', enabled: '1', introduction: '专业养龟多年，有大型水池' },
-  { id: 7, name: '孙阿姨', phone: '13800138017', address: '绿园小区2号楼', distance: 2.0, careTypes: ['cat', 'dog', 'rabbit', 'hamster'], experience: 3, avgRating: 4.8, serviceCount: 31, certified: '1', enabled: '1', introduction: '家庭式寄养，环境温馨' },
-  { id: 8, name: '周叔叔', phone: '13800138018', address: '郊外农场', distance: 5.5, careTypes: ['dog'], experience: 10, avgRating: 4.3, serviceCount: 23, certified: '1', enabled: '0', introduction: '大型户外场地，适合运动量较大的狗狗' },
-  { id: 9, name: '吴阿姨', phone: '13800138019', address: '蓝天小区', distance: 3.5, careTypes: ['bird'], experience: 5, avgRating: 4.5, serviceCount: 18, certified: '0', enabled: '1', introduction: '专业鸟类照顾' },
-  { id: 10, name: '郑奶奶', phone: '13800138020', address: '温馨家园', distance: 2.8, careTypes: ['cat', 'dog'], experience: 4, avgRating: 4.7, serviceCount: 29, certified: '1', enabled: '1', introduction: '爱心人士，对待宠物如同家人' }
-]
-
-const loadData = () => {
+const loadData = async () => {
   loading.value = true
-  setTimeout(() => {
-    let filtered = [...mockData]
-    if (searchForm.name) {
-      filtered = filtered.filter(item => item.name.includes(searchForm.name))
-    }
-    if (searchForm.careTypes) {
-      filtered = filtered.filter(item => item.careTypes.includes(searchForm.careTypes))
-    }
-    if (searchForm.certified) {
-      filtered = filtered.filter(item => item.certified === searchForm.certified)
-    }
-    pagination.total = filtered.length
-    const start = (pagination.page - 1) * pagination.pageSize
-    const end = start + pagination.pageSize
-    tableData.value = filtered.slice(start, end).map(item => ({
+  try {
+    const res = await getUserList({
+      page: pagination.page,
+      size: pagination.pageSize,
+      nickname: searchForm.name || undefined
+    })
+    pagination.total = res.total
+    tableData.value = res.list.map((item: User) => ({
       ...item,
-      careTypesList: item.careTypes.map((s: string) => ({
-        value: s,
-        label: speciesMap[s]
-      }))
+      name: item.nickname || '用户' + item.id,
+      phone: item.phone || '-',
+      address: '-',
+      distance: 0,
+      careTypes: ['cat'],
+      experience: 0,
+      avgRating: 4.5,
+      serviceCount: 0,
+      certified: item.role === 'caregiver' ? '1' : '0',
+      enabled: item.status === 'enabled' ? '1' : '0',
+      introduction: '-',
+      careTypesList: [{ value: 'cat', label: '猫' }]
     }))
+  } catch (error) {
+    ElMessage.error('加载数据失败')
+  } finally {
     loading.value = false
-  }, 300)
+  }
 }
 
 const handleSearch = () => {
@@ -280,29 +273,45 @@ const handleView = (row: any) => {
   detailVisible.value = true
 }
 
-const handleCertify = (row: any) => {
+const handleCertify = async (row: any) => {
   ElMessageBox.confirm(`确定要认证被寄养者 "${row.name}" 吗？`, '提示', {
     confirmButtonText: '确定',
     cancelButtonText: '取消',
     type: 'warning'
-  }).then(() => {
-    ElMessage.success('认证成功')
-    loadData()
+  }).then(async () => {
+    try {
+      await updateUser(row.id, { role: 'caregiver' })
+      ElMessage.success('认证成功')
+      loadData()
+    } catch (error) {
+      ElMessage.error('认证失败')
+    }
   }).catch(() => {})
 }
 
-const handleStatusChange = (row: any) => {
-  ElMessage.success(row.enabled === '1' ? '已启用' : '已禁用')
+const handleStatusChange = async (row: any) => {
+  try {
+    await updateUser(row.id, { status: row.enabled === '1' ? 'enabled' : 'disabled' })
+    ElMessage.success(row.enabled === '1' ? '已启用' : '已禁用')
+  } catch (error) {
+    row.enabled = row.enabled === '1' ? '0' : '1'
+    ElMessage.error('操作失败')
+  }
 }
 
-const handleDelete = (row: any) => {
+const handleDelete = async (row: any) => {
   ElMessageBox.confirm(`确定要禁用被寄养者 "${row.name}" 吗？`, '提示', {
     confirmButtonText: '确定',
     cancelButtonText: '取消',
     type: 'warning'
-  }).then(() => {
-    ElMessage.success('禁用成功')
-    loadData()
+  }).then(async () => {
+    try {
+      await updateUser(row.id, { status: 'disabled' })
+      ElMessage.success('禁用成功')
+      loadData()
+    } catch (error) {
+      ElMessage.error('禁用失败')
+    }
   }).catch(() => {})
 }
 

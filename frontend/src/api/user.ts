@@ -9,7 +9,12 @@ export interface SysUser {
   enabled: number
   createTime: string
   roleName?: string
+  nickname?: string
+  role?: string
+  status?: string
 }
+
+export type User = SysUser
 
 export interface UserListParams {
   page?: number
@@ -17,6 +22,7 @@ export interface UserListParams {
   username?: string
   roleCode?: string
   phone?: string
+  nickname?: string
 }
 
 export interface UserListResponse {
