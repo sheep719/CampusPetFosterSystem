@@ -1,31 +1,27 @@
 package com.example.campuspetfoster.config;
 
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.core.env.Environment;
-import org.springframework.jdbc.datasource.DriverManagerDataSource;
+import org.springframework.context.ApplicationContextInitializer;
+import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.core.env.ConfigurableEnvironment;
+import org.springframework.core.env.MapPropertySource;
 
-import javax.sql.DataSource;
+import java.util.HashMap;
+import java.util.Map;
 
 @Slf4j
-@Configuration
-public class DatabaseConfig {
+public class DatabasePropertyInitializer implements ApplicationContextInitializer<ConfigurableApplicationContext> {
 
-    private final Environment env;
+    @Override
+    public void initialize(ConfigurableApplicationContext applicationContext) {
+        ConfigurableEnvironment env = applicationContext.getEnvironment();
 
-    public DatabaseConfig(Environment env) {
-        this.env = env;
-    }
-
-    @Bean
-    public DataSource dataSource() {
-        String mysqlUrl = getProperty("MYSQL_URL", "MYSQLURL", "");
-        String username = getProperty("MYSQLUSER", "MYSQL_USER", "root");
-        String password = getProperty("MYSQLPASSWORD", "MYSQL_PASSWORD", "");
-        String host = getProperty("MYSQLHOST", "MYSQL_HOST", "localhost");
-        String port = getProperty("MYSQLPORT", "MYSQL_PORT", "3306");
-        String database = getProperty("MYSQLDATABASE", "MYSQL_DATABASE", "campus_pet_foster");
+        String mysqlUrl = getFirst(env, "MYSQL_URL", "MYSQLURL", "DATABASE_URL", "");
+        String username = getFirst(env, "MYSQLUSER", "MYSQL_USER", "DATABASE_USERNAME", "root");
+        String password = getFirst(env, "MYSQLPASSWORD", "MYSQL_PASSWORD", "DATABASE_PASSWORD", "");
+        String host = getFirst(env, "MYSQLHOST", "MYSQL_HOST", "localhost");
+        String port = getFirst(env, "MYSQLPORT", "MYSQL_PORT", "3306");
+        String database = getFirst(env, "MYSQLDATABASE", "MYSQL_DATABASE", "campus_pet_foster");
 
         String jdbcUrl = buildJdbcUrl(mysqlUrl, host, port, database);
 
@@ -41,20 +37,22 @@ public class DatabaseConfig {
         log.info("Password: {}", (password != null && !password.isEmpty()) ? "******" : "空");
         log.info("================================");
 
-        DriverManagerDataSource dataSource = new DriverManagerDataSource();
-        dataSource.setDriverClassName("com.mysql.cj.jdbc.Driver");
-        dataSource.setUrl(jdbcUrl);
-        dataSource.setUsername(username);
-        dataSource.setPassword(password);
-        return dataSource;
+        Map<String, Object> props = new HashMap<>();
+        props.put("spring.datasource.url", jdbcUrl);
+        props.put("spring.datasource.username", username);
+        props.put("spring.datasource.password", password);
+
+        env.getPropertySources().addFirst(new MapPropertySource("database-config", props));
     }
 
-    private String getProperty(String key1, String key2, String defaultValue) {
-        String val = env.getProperty(key1);
-        if (val != null && !val.isEmpty()) return val;
-        val = env.getProperty(key2);
-        if (val != null && !val.isEmpty()) return val;
-        return defaultValue;
+    private String getFirst(ConfigurableEnvironment env, String... keys) {
+        for (String key : keys) {
+            String val = env.getProperty(key);
+            if (val != null && !val.isEmpty()) {
+                return val;
+            }
+        }
+        return keys[keys.length - 1];
     }
 
     private String buildJdbcUrl(String mysqlUrl, String host, String port, String database) {
