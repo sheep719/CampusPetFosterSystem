@@ -16,12 +16,27 @@ public class DatabasePropertyInitializer implements ApplicationContextInitialize
     public void initialize(ConfigurableApplicationContext applicationContext) {
         ConfigurableEnvironment env = applicationContext.getEnvironment();
 
-        String mysqlUrl = getFirst(env, "DATABASE_URL", "MYSQL_URL", "MYSQLURL", "");
-        String username = getFirst(env, "DATABASE_USERNAME", "MYSQLUSER", "MYSQL_USER", "root");
-        String password = getFirst(env, "DATABASE_PASSWORD", "MYSQLPASSWORD", "MYSQL_PASSWORD", "");
-        String host = getFirst(env, "MYSQLHOST", "MYSQL_HOST", "localhost");
-        String port = getFirst(env, "MYSQLPORT", "MYSQL_PORT", "3306");
-        String database = getFirst(env, "MYSQLDATABASE", "MYSQL_DATABASE", "campus_pet_foster");
+        log.info("========== 环境变量调试 ==========");
+        Map<String, String> sysEnv = System.getenv();
+        for (Map.Entry<String, String> entry : sysEnv.entrySet()) {
+            String key = entry.getKey();
+            if (key.toUpperCase().contains("MYSQL") || key.toUpperCase().contains("DATABASE") || key.toUpperCase().contains("DB_")) {
+                String val = entry.getValue();
+                if (key.toLowerCase().contains("password") || key.toLowerCase().contains("pass") || key.toLowerCase().contains("secret")) {
+                    log.info("  {} = {}", key, "******");
+                } else {
+                    log.info("  {} = {}", key, val.length() > 100 ? val.substring(0, 100) + "..." : val);
+                }
+            }
+        }
+        log.info("==================================");
+
+        String mysqlUrl = getEnvFirst("DATABASE_URL", "MYSQL_URL", "MYSQLURL", "");
+        String username = getEnvFirst("DATABASE_USERNAME", "MYSQLUSER", "MYSQL_USER", "root");
+        String password = getEnvFirst("DATABASE_PASSWORD", "MYSQLPASSWORD", "MYSQL_PASSWORD", "");
+        String host = getEnvFirst("MYSQLHOST", "MYSQL_HOST", "DATABASE_HOST", "localhost");
+        String port = getEnvFirst("MYSQLPORT", "MYSQL_PORT", "DATABASE_PORT", "3306");
+        String database = getEnvFirst("MYSQLDATABASE", "MYSQL_DATABASE", "DATABASE_NAME", "campus_pet_foster");
 
         String jdbcUrl = buildJdbcUrl(mysqlUrl, host, port, database);
 
@@ -45,9 +60,9 @@ public class DatabasePropertyInitializer implements ApplicationContextInitialize
         env.getPropertySources().addFirst(new MapPropertySource("database-config", props));
     }
 
-    private String getFirst(ConfigurableEnvironment env, String... keys) {
+    private String getEnvFirst(String... keys) {
         for (String key : keys) {
-            String val = env.getProperty(key);
+            String val = System.getenv(key);
             if (val != null && !val.isEmpty()) {
                 return val;
             }
