@@ -1,6 +1,5 @@
 [build]
-builder = "maven"
-buildCommand = "mvn -f backend/pom.xml clean package -DskipTests"
+dockerfilePath = "Dockerfile"
 
 [deploy]
-startCommand = "java -jar backend/target/campus-pet-foster-1.0.0.jar"
+startCommand = "java -jar campus-pet-foster-1.0.0.jar"
