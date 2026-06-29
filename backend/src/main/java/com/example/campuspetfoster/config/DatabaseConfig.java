@@ -1,9 +1,9 @@
 package com.example.campuspetfoster.config;
 
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.Environment;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 
 import javax.sql.DataSource;
@@ -12,27 +12,28 @@ import javax.sql.DataSource;
 @Configuration
 public class DatabaseConfig {
 
-    @Value("${MYSQL_URL:${MYSQLURL:}}")
-    private String mysqlUrl;
+    private final Environment env;
 
-    @Value("${MYSQLUSER:${MYSQL_USER:root}}")
-    private String username;
-
-    @Value("${MYSQLPASSWORD:${MYSQL_PASSWORD:}}")
-    private String password;
-
-    @Value("${MYSQLHOST:${MYSQL_HOST:localhost}}")
-    private String host;
-
-    @Value("${MYSQLPORT:${MYSQL_PORT:3306}}")
-    private String port;
-
-    @Value("${MYSQLDATABASE:${MYSQL_DATABASE:campus_pet_foster}}")
-    private String database;
+    public DatabaseConfig(Environment env) {
+        this.env = env;
+    }
 
     @Bean
     public DataSource dataSource() {
-        String jdbcUrl = buildJdbcUrl();
+        String mysqlUrl = getProperty("MYSQL_URL", "MYSQLURL", "");
+        String username = getProperty("MYSQLUSER", "MYSQL_USER", "root");
+        String password = getProperty("MYSQLPASSWORD", "MYSQL_PASSWORD", "");
+        String host = getProperty("MYSQLHOST", "MYSQL_HOST", "localhost");
+        String port = getProperty("MYSQLPORT", "MYSQL_PORT", "3306");
+        String database = getProperty("MYSQLDATABASE", "MYSQL_DATABASE", "campus_pet_foster");
+
+        String jdbcUrl = buildJdbcUrl(mysqlUrl, host, port, database);
+
+        String[] userPass = extractUserPass(mysqlUrl);
+        if (userPass != null) {
+            username = userPass[0];
+            password = userPass[1];
+        }
 
         log.info("========== 数据库配置 ==========");
         log.info("JDBC URL: {}", jdbcUrl);
@@ -48,7 +49,15 @@ public class DatabaseConfig {
         return dataSource;
     }
 
-    private String buildJdbcUrl() {
+    private String getProperty(String key1, String key2, String defaultValue) {
+        String val = env.getProperty(key1);
+        if (val != null && !val.isEmpty()) return val;
+        val = env.getProperty(key2);
+        if (val != null && !val.isEmpty()) return val;
+        return defaultValue;
+    }
+
+    private String buildJdbcUrl(String mysqlUrl, String host, String port, String database) {
         if (mysqlUrl != null && !mysqlUrl.isEmpty()) {
             if (mysqlUrl.startsWith("jdbc:mysql://")) {
                 return appendParams(mysqlUrl);
@@ -57,14 +66,7 @@ public class DatabaseConfig {
                 String url = mysqlUrl.substring(8);
                 int atIndex = url.lastIndexOf('@');
                 if (atIndex >= 0) {
-                    String userPass = url.substring(0, atIndex);
-                    String hostDb = url.substring(atIndex + 1);
-                    String[] up = userPass.split(":", 2);
-                    if (up.length == 2) {
-                        username = up[0];
-                        password = up[1];
-                    }
-                    return appendParams("jdbc:mysql://" + hostDb);
+                    return appendParams("jdbc:mysql://" + url.substring(atIndex + 1));
                 }
                 return appendParams("jdbc:mysql://" + url);
             }
@@ -75,6 +77,21 @@ public class DatabaseConfig {
                 "jdbc:mysql://%s:%s/%s?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true",
                 host, port, database
         );
+    }
+
+    private String[] extractUserPass(String mysqlUrl) {
+        if (mysqlUrl != null && mysqlUrl.startsWith("mysql://")) {
+            String url = mysqlUrl.substring(8);
+            int atIndex = url.lastIndexOf('@');
+            if (atIndex >= 0) {
+                String userPass = url.substring(0, atIndex);
+                String[] up = userPass.split(":", 2);
+                if (up.length == 2) {
+                    return up;
+                }
+            }
+        }
+        return null;
     }
 
     private String appendParams(String url) {
