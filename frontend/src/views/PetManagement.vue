@@ -201,6 +201,8 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
 import { Search, Refresh, Plus, Edit, Delete, View } from '@element-plus/icons-vue'
+import { getPetList, createPet, updatePet, deletePet } from '@/api/pet'
+import type { Pet } from '@/api/pet'
 
 const loading = ref(false)
 const dialogVisible = ref(false)
@@ -296,43 +298,30 @@ const getHealthTagType = (status: string) => {
   return map[status] || 'info'
 }
 
-const mockData = [
-  { id: 1, petName: '咪咪', species: 'cat', breed: '英短', gender: '2', age: 2, weight: 3.5, healthStatus: 'healthy', ownerName: '张三', ownerPhone: '13800138001', createTime: '2026-06-23 10:00:00', notes: '性格温顺，喜欢吃猫粮' },
-  { id: 2, petName: '旺财', species: 'dog', breed: '金毛', gender: '1', age: 3, weight: 25, healthStatus: 'healthy', ownerName: '李四', ownerPhone: '13800138002', createTime: '2026-06-23 11:00:00', notes: '活泼好动，喜欢玩耍' },
-  { id: 3, petName: '雪球', species: 'rabbit', breed: '垂耳兔', gender: '2', age: 1, weight: 1.8, healthStatus: 'healthy', ownerName: '王五', ownerPhone: '13800138003', createTime: '2026-06-24 09:00:00', notes: '胆小，需要安静环境' },
-  { id: 4, petName: '小仓鼠', species: 'hamster', breed: '金丝熊', gender: '1', age: 0.5, weight: 0.15, healthStatus: 'sub_healthy', ownerName: '赵六', ownerPhone: '13800138004', createTime: '2026-06-24 10:00:00', notes: '最近有点食欲不振' },
-  { id: 5, petName: '橘子', species: 'cat', breed: '橘猫', gender: '1', age: 4, weight: 5.2, healthStatus: 'healthy', ownerName: '钱七', ownerPhone: '13800138005', createTime: '2026-06-24 14:00:00', notes: '爱吃，容易长胖' },
-  { id: 6, petName: '可乐', species: 'dog', breed: '柯基', gender: '2', age: 2, weight: 12, healthStatus: 'healthy', ownerName: '孙八', ownerPhone: '13800138006', createTime: '2026-06-25 08:00:00', notes: '短腿，跑不快' },
-  { id: 7, petName: '皮皮', species: 'bird', breed: '玄凤鹦鹉', gender: '1', age: 1, weight: 0.09, healthStatus: 'healthy', ownerName: '周九', ownerPhone: '13800138007', createTime: '2026-06-25 09:00:00', notes: '会说话' },
-  { id: 8, petName: '忍者', species: 'turtle', breed: '巴西龟', gender: '1', age: 5, weight: 0.8, healthStatus: 'healthy', ownerName: '吴十', ownerPhone: '13800138008', createTime: '2026-06-25 10:00:00', notes: '喜欢晒太阳' },
-  { id: 9, petName: '小黑', species: 'cat', breed: '黑猫', gender: '1', age: 1, weight: 2.8, healthStatus: 'sick', ownerName: '郑十一', ownerPhone: '13800138009', createTime: '2026-06-25 11:00:00', notes: '感冒中，正在治疗' },
-  { id: 10, petName: '大白', species: 'dog', breed: '萨摩耶', gender: '2', age: 2, weight: 20, healthStatus: 'healthy', ownerName: '王十二', ownerPhone: '13800138010', createTime: '2026-06-25 14:00:00', notes: '毛发雪白，需要经常打理' },
-  { id: 11, petName: '布丁', species: 'hamster', breed: '布丁仓鼠', gender: '2', age: 0.8, weight: 0.12, healthStatus: 'healthy', ownerName: '刘十三', ownerPhone: '13800138011', createTime: '2026-06-25 15:00:00', notes: '很可爱' },
-  { id: 12, petName: '花花', species: 'rabbit', breed: '荷兰侏儒兔', gender: '2', age: 1.5, weight: 1.2, healthStatus: 'healthy', ownerName: '陈十四', ownerPhone: '13800138012', createTime: '2026-06-25 16:00:00', notes: '体型小巧' }
-]
-
-const loadData = () => {
+const loadData = async () => {
   loading.value = true
-  setTimeout(() => {
-    let filtered = [...mockData]
-    if (searchForm.petName) {
-      filtered = filtered.filter(item => item.petName.includes(searchForm.petName))
-    }
-    if (searchForm.species) {
-      filtered = filtered.filter(item => item.species === searchForm.species)
-    }
-    if (searchForm.gender) {
-      filtered = filtered.filter(item => item.gender === searchForm.gender)
-    }
-    if (searchForm.healthStatus) {
-      filtered = filtered.filter(item => item.healthStatus === searchForm.healthStatus)
-    }
-    pagination.total = filtered.length
-    const start = (pagination.page - 1) * pagination.pageSize
-    const end = start + pagination.pageSize
-    tableData.value = filtered.slice(start, end)
+  try {
+    const res = await getPetList({
+      page: pagination.page,
+      size: pagination.pageSize,
+      petName: searchForm.petName || undefined,
+      species: searchForm.species || undefined
+    })
+    pagination.total = res.total
+    tableData.value = res.list.map((item: Pet) => ({
+      ...item,
+      weight: 0,
+      healthStatus: item.vaccineStatus === '已完成疫苗接种' ? 'healthy' : 'sub_healthy',
+      ownerName: '主人' + item.ownerId,
+      ownerPhone: '-',
+      createTime: '-',
+      notes: item.healthNote || item.dietNote || '-'
+    }))
+  } catch (error) {
+    ElMessage.error('加载数据失败')
+  } finally {
     loading.value = false
-  }, 300)
+  }
 }
 
 const handleSearch = () => {
@@ -408,9 +397,27 @@ const handleView = (row: any) => {
 
 const handleSubmit = async () => {
   await formRef.value?.validate()
-  ElMessage.success(isEdit.value ? '修改成功' : '新增成功')
-  dialogVisible.value = false
-  loadData()
+  try {
+    const data = {
+      petName: form.petName,
+      species: form.species,
+      breed: form.breed,
+      gender: form.gender === '1' ? 'male' : 'female',
+      age: form.age,
+      healthNote: form.notes
+    }
+    if (isEdit.value && form.id) {
+      await updatePet(form.id, data)
+      ElMessage.success('修改成功')
+    } else {
+      await createPet(data)
+      ElMessage.success('新增成功')
+    }
+    dialogVisible.value = false
+    loadData()
+  } catch (error) {
+    ElMessage.error('操作失败')
+  }
 }
 
 const handleDelete = (row: any) => {
@@ -418,9 +425,14 @@ const handleDelete = (row: any) => {
     confirmButtonText: '确定',
     cancelButtonText: '取消',
     type: 'warning'
-  }).then(() => {
-    ElMessage.success('删除成功')
-    loadData()
+  }).then(async () => {
+    try {
+      await deletePet(row.id)
+      ElMessage.success('删除成功')
+      loadData()
+    } catch (error) {
+      ElMessage.error('删除失败')
+    }
   }).catch(() => {})
 }
 

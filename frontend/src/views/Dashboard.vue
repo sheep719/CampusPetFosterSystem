@@ -146,13 +146,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { ArrowUp, ArrowDown } from '@element-plus/icons-vue'
+import { getDashboardStats, getPetSpeciesDistribution } from '@/api/dashboard'
 
-const userCount = ref(256)
-const petCount = ref(128)
-const fosteringCount = ref(24)
-const pendingApplications = ref(8)
+const userCount = ref(0)
+const petCount = ref(0)
+const fosteringCount = ref(0)
+const pendingApplications = ref(0)
+const loading = ref(false)
 
 const weekData = ref([
   { day: '周一', count: 12, value: 40 },
@@ -165,18 +167,18 @@ const weekData = ref([
 ])
 
 const petTypes = ref([
-  { name: '猫咪', count: 58, color: '#667eea' },
-  { name: '狗狗', count: 46, color: '#f093fb' },
-  { name: '兔子', count: 14, color: '#4facfe' },
-  { name: '其他', count: 10, color: '#43e97b' }
+  { name: '猫咪', count: 0, color: '#667eea' },
+  { name: '狗狗', count: 0, color: '#f093fb' },
+  { name: '兔子', count: 0, color: '#4facfe' },
+  { name: '其他', count: 0, color: '#43e97b' }
 ])
 
 const recentActivities = ref([
-  { text: '新用户 student005 注册成功', type: 'user', time: '5分钟前' },
-  { text: '寄养申请 #20240125001 提交审核', type: 'application', time: '12分钟前' },
-  { text: '李阿姨 完成了一次寄养服务', type: 'complete', time: '1小时前' },
-  { text: '新增宠物信息：小白（橘猫）', type: 'pet', time: '2小时前' },
-  { text: '新的被寄养者 王叔叔 通过审核', type: 'user', time: '3小时前' }
+  { text: '新用户注册成功', type: 'user', time: '刚刚' },
+  { text: '寄养申请提交审核', type: 'application', time: '刚刚' },
+  { text: '完成了一次寄养服务', type: 'complete', time: '刚刚' },
+  { text: '新增宠物信息', type: 'pet', time: '刚刚' },
+  { text: '新的被寄养者通过审核', type: 'user', time: '刚刚' }
 ])
 
 const topCaregivers = ref([
@@ -186,6 +188,48 @@ const topCaregivers = ref([
   { id: 4, name: '赵阿姨', avatar: '👩', count: 15, rating: 4.6 },
   { id: 5, name: '钱爷爷', avatar: '👴', count: 12, rating: 4.5 }
 ])
+
+const loadStats = async () => {
+  loading.value = true
+  try {
+    const stats = await getDashboardStats()
+    userCount.value = stats.totalUsers || 0
+    petCount.value = stats.totalPets || 0
+    fosteringCount.value = stats.fosteringPets || 0
+    pendingApplications.value = stats.pendingApplications || 0
+
+    const speciesData = await getPetSpeciesDistribution()
+    const speciesMap: Record<string, string> = {
+      cat: '猫咪',
+      dog: '狗狗',
+      rabbit: '兔子',
+      hamster: '仓鼠',
+      bird: '鸟类',
+      other: '其他'
+    }
+    const colorMap: Record<string, string> = {
+      cat: '#667eea',
+      dog: '#f093fb',
+      rabbit: '#4facfe',
+      hamster: '#ff9f43',
+      bird: '#1dd1a1',
+      other: '#43e97b'
+    }
+    petTypes.value = Object.entries(speciesData).map(([key, count]) => ({
+      name: speciesMap[key] || key,
+      count: count as number,
+      color: colorMap[key] || '#909399'
+    }))
+  } catch (error) {
+    console.error('加载统计数据失败:', error)
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(() => {
+  loadStats()
+})
 </script>
 
 <style scoped>
