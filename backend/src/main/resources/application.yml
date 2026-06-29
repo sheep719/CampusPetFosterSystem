@@ -3,7 +3,7 @@ server:
 
 spring:
   datasource:
-    url: "jdbc:sqlite:./data/example_db.sqlite"
+    url: "jdbc:sqlite:./example_db.sqlite"
     driver-class-name: org.sqlite.JDBC
   sql:
     init:
