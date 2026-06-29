@@ -117,6 +117,6 @@ CREATE TABLE IF NOT EXISTS notification (
 );
 
 INSERT OR IGNORE INTO sys_user (username, password, role_code, phone, enabled, create_time) VALUES
-('admin', '$2a$10$rD3Z7FWH4fID9VxQxQv1HOYb6qLp0L3M7D4E9F3H5I6J7K8L9M0N', 'admin', '13800138000', 1, '2024-01-01 00:00:00'),
-('student001', '$2a$10$rD3Z7FWH4fID9VxQxQv1HOYb6qLp0L3M7D4E9F3H5I6J7K8L9M0N', 'owner', '13900139001', 1, '2024-01-02 00:00:00'),
-('caregiver001', '$2a$10$rD3Z7FWH4fID9VxQxQv1HOYb6qLp0L3M7D4E9F3H5I6J7K8L9M0N', 'caregiver', '13900139002', 1, '2024-01-03 00:00:00');
+('admin', '123456', 'admin', '13800138000', 1, '2024-01-01 00:00:00'),
+('student001', '123456', 'owner', '13900139001', 1, '2024-01-02 00:00:00'),
+('caregiver001', '123456', 'caregiver', '13900139002', 1, '2024-01-03 00:00:00');

@@ -7,14 +7,9 @@ import com.example.campuspetfoster.entity.SysUser;
 import com.example.campuspetfoster.mapper.PetCaregiverProfileMapper;
 import com.example.campuspetfoster.mapper.PetOwnerProfileMapper;
 import com.example.campuspetfoster.mapper.SysUserMapper;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.security.Keys;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import javax.crypto.SecretKey;
-import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
@@ -25,8 +20,6 @@ public class AuthService {
     private final SysUserMapper sysUserMapper;
     private final PetOwnerProfileMapper petOwnerProfileMapper;
     private final PetCaregiverProfileMapper petCaregiverProfileMapper;
-    private final BCryptPasswordEncoder passwordEncoder;
-    private final SecretKey secretKey;
 
     public AuthService(SysUserMapper sysUserMapper, 
                       PetOwnerProfileMapper petOwnerProfileMapper,
@@ -34,8 +27,6 @@ public class AuthService {
         this.sysUserMapper = sysUserMapper;
         this.petOwnerProfileMapper = petOwnerProfileMapper;
         this.petCaregiverProfileMapper = petCaregiverProfileMapper;
-        this.passwordEncoder = new BCryptPasswordEncoder();
-        this.secretKey = Keys.hmacShaKeyFor("campus-pet-foster-secret-key-2026".getBytes(StandardCharsets.UTF_8));
     }
 
     public Map<String, Object> login(String username, String password) {
@@ -43,18 +34,12 @@ public class AuthService {
         wrapper.eq(SysUser::getUsername, username);
         SysUser user = sysUserMapper.selectOne(wrapper);
         
-        if (user == null || !passwordEncoder.matches(password, user.getPassword())) {
+        if (user == null || !user.getPassword().equals(password)) {
             return null;
         }
         
-        String token = Jwts.builder()
-                .claim("userId", user.getId())
-                .claim("role", user.getRoleCode())
-                .signWith(secretKey)
-                .compact();
-        
         Map<String, Object> result = new HashMap<>();
-        result.put("token", token);
+        result.put("token", "dummy-token-" + user.getId());
         result.put("role", user.getRoleCode());
         result.put("userId", user.getId());
         return result;
@@ -72,7 +57,7 @@ public class AuthService {
 
         SysUser user = new SysUser();
         user.setUsername(username);
-        user.setPassword(passwordEncoder.encode(password));
+        user.setPassword(password);
         user.setRoleCode("owner");
         user.setPhone(phone);
         user.setEnabled(1);
@@ -104,7 +89,7 @@ public class AuthService {
 
         SysUser user = new SysUser();
         user.setUsername(username);
-        user.setPassword(passwordEncoder.encode(password));
+        user.setPassword(password);
         user.setRoleCode("caregiver");
         user.setPhone(phone);
         user.setEnabled(1);
