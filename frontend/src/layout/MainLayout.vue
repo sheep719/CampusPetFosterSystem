@@ -4,7 +4,7 @@
       <div class="sidebar-header">
         <h2>🐾 宠物寄养系统</h2>
       </div>
-      <el-menu :default-active="activeMenu" mode="vertical" class="sidebar-menu" :collapse="isCollapsed">
+      <el-menu :default-active="activeMenu" :router="true" mode="vertical" class="sidebar-menu" :collapse="isCollapsed">
         <template v-if="role === 'admin'">
           <el-menu-item index="/dashboard">
             <el-icon><component :is="DataAnalysis" /></el-icon>
