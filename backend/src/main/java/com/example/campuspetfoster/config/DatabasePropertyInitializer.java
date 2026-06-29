@@ -38,6 +38,8 @@ public class DatabasePropertyInitializer implements ApplicationContextInitialize
         String port = getEnvFirst("MYSQLPORT", "MYSQL_PORT", "DATABASE_PORT", "3306");
         String database = getEnvFirst("MYSQLDATABASE", "MYSQL_DATABASE", "DATABASE_NAME", "campus_pet_foster");
 
+        mysqlUrl = resolvePlaceholders(mysqlUrl, host, port, database, username, password);
+
         String jdbcUrl = buildJdbcUrl(mysqlUrl, host, port, database);
 
         String[] userPass = extractUserPass(mysqlUrl);
@@ -68,6 +70,24 @@ public class DatabasePropertyInitializer implements ApplicationContextInitialize
             }
         }
         return keys[keys.length - 1];
+    }
+
+    private String resolvePlaceholders(String url, String host, String port, String database, String username, String password) {
+        if (url == null || url.isEmpty()) {
+            return url;
+        }
+        url = url.replace("${MYSQLHOST}", host)
+                .replace("${MYSQL_HOST}", host)
+                .replace("${MYSQLPORT}", port)
+                .replace("${MYSQL_PORT}", port)
+                .replace("${MYSQLDATABASE}", database)
+                .replace("${MYSQL_DATABASE}", database)
+                .replace("${MYSQLUSER}", username)
+                .replace("${MYSQL_USER}", username)
+                .replace("${MYSQLPASSWORD}", password)
+                .replace("${MYSQL_PASSWORD}", password)
+                .replace("${MYSQL_ROOT_PASSWORD}", password);
+        return url;
     }
 
     private String buildJdbcUrl(String mysqlUrl, String host, String port, String database) {
