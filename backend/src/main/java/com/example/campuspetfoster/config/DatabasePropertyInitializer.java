@@ -18,15 +18,14 @@ public class DatabasePropertyInitializer implements ApplicationContextInitialize
 
         log.info("========== 环境变量调试 ==========");
         Map<String, String> sysEnv = System.getenv();
+        log.info("  环境变量总数: {}", sysEnv.size());
         for (Map.Entry<String, String> entry : sysEnv.entrySet()) {
             String key = entry.getKey();
-            if (key.toUpperCase().contains("MYSQL") || key.toUpperCase().contains("DATABASE") || key.toUpperCase().contains("DB_")) {
-                String val = entry.getValue();
-                if (key.toLowerCase().contains("password") || key.toLowerCase().contains("pass") || key.toLowerCase().contains("secret")) {
-                    log.info("  {} = {}", key, "******");
-                } else {
-                    log.info("  {} = {}", key, val.length() > 100 ? val.substring(0, 100) + "..." : val);
-                }
+            String val = entry.getValue();
+            if (key.toLowerCase().contains("password") || key.toLowerCase().contains("pass") || key.toLowerCase().contains("secret")) {
+                log.info("  {} = {}", key, "******");
+            } else {
+                log.info("  {} = {}", key, val.length() > 100 ? val.substring(0, 100) + "..." : val);
             }
         }
         log.info("==================================");
