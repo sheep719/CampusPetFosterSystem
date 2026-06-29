@@ -26,4 +26,5 @@ public class FosterApplication {
     private String rejectReason;
     private Integer rating;
     private String reviewText;
+    private LocalDateTime createTime;
 }

@@ -80,7 +80,8 @@ CREATE TABLE IF NOT EXISTS foster_application (
     status VARCHAR(20) DEFAULT 'pending',
     reject_reason TEXT,
     rating INTEGER,
-    review_text TEXT
+    review_text TEXT,
+    create_time DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS care_diary (
