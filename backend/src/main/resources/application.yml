@@ -3,9 +3,9 @@ server:
 
 spring:
   datasource:
-    url: ${MYSQL_PUBLIC_URL:jdbc:mysql://reseau.proxy.rlwy.net:32490/railway}?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
-    username: ${MYSQL_USER:${MYSQLUSER:root}}
-    password: ${MYSQL_ROOT_PASSWORD:${MYSQLPASSWORD:FombvUtVVkscGEehlunozfUGlAOFoher}}
+    url: jdbc:mysql://reseau.proxy.rlwy.net:32490/railway?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    username: root
+    password: FombvUtVVkscGEehlunozfUGlAOFoher
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
       maximum-pool-size: 5
