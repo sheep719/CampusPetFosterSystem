@@ -3,14 +3,12 @@ server:
 
 spring:
   datasource:
-    url: jdbc:mysql://reseau.proxy.rlwy.net:32490/railway?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
-    username: root
-    password: FombvUtVVkscGEehlunozfUGlAOFoher
-    driver-class-name: com.mysql.cj.jdbc.Driver
-    hikari:
-      maximum-pool-size: 5
-      minimum-idle: 1
-      connection-timeout: 30000
+    url: "jdbc:sqlite::memory:"
+    driver-class-name: org.sqlite.JDBC
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:schema.sql
   servlet:
     multipart:
       max-file-size: 10MB
@@ -31,4 +29,3 @@ mybatis-plus:
 logging:
   level:
     com.example.campuspetfoster: INFO
-    com.zaxxer.hikari: DEBUG
