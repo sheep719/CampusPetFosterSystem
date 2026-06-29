@@ -3,10 +3,18 @@ server:
 
 spring:
   datasource:
-    url: ${MYSQL_PUBLIC_URL:jdbc:mysql://reseau.proxy.rlwy.net:32490/railway}?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    url: jdbc:mysql://${MYSQLHOST:reseau.proxy.rlwy.net}:${MYSQLPORT:32490}/${MYSQLDATABASE:railway}?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
     username: ${MYSQLUSER:root}
     password: ${MYSQLPASSWORD:FombvUtVVkscGEehlunozfUGlAOFoher}
     driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      maximum-pool-size: 5
+      minimum-idle: 1
+      connection-timeout: 30000
+  sql:
+    init:
+      mode: always
+      continue-on-error: true
   servlet:
     multipart:
       max-file-size: 10MB
