@@ -3,7 +3,7 @@ server:
 
 spring:
   datasource:
-    url: ${MYSQL_URL:${DATABASE_URL:jdbc:mysql://localhost:3306/campus_pet_foster?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&connectTimeout=10000&socketTimeout=60000}
+    url: ${MYSQL_URL:${DATABASE_URL:jdbc:mysql://localhost:3306/campus_pet_foster?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&connectTimeout=10000&socketTimeout=60000}}
     username: ${MYSQLUSER:${DATABASE_USERNAME:root}}
     password: ${MYSQLPASSWORD:${DATABASE_PASSWORD:123456}}
     driver-class-name: com.mysql.cj.jdbc.Driver
